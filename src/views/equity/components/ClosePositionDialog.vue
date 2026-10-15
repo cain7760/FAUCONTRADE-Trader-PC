@@ -3,7 +3,7 @@ import { ref, watch } from 'vue'
 import OrderTicket from './OrderTicket.vue'
 import PositionOrderDialog from './PositionOrderDialog.vue'
 
-const props = defineProps({ modelValue: Boolean, position: Object, account: Object, paused: Boolean })
+const props = defineProps({ modelValue: Boolean, position: Object, account: Object, paused: Boolean, brokerAccounts: { type: Array, default: () => [] } })
 const emit = defineEmits(['update:modelValue', 'submit'])
 const quote = ref(null)
 const initialOrder = ref(null)
@@ -18,6 +18,8 @@ watch(() => props.modelValue, visible => {
     quantity: Math.max(0, Number(props.position?.available) || 0),
     quantityMode: 'quantity',
     unit: 'shares',
+    brokerAccountId: props.position?.brokerAccountId ?? null,
+    brokerAccountLabel: props.position?.brokerAccountLabel ?? null,
     sourceOrderSide: 'sell',
   }
   ticketKey.value++
@@ -31,7 +33,7 @@ function submit(order) {
 
 <template>
   <PositionOrderDialog :model-value="modelValue" title="平仓" class="close-dialog" :position="position" :account="account" @update:model-value="emit('update:modelValue', $event)" @quote="quote = $event">
-    <template #order><OrderTicket v-if="modelValue && position && account" :key="ticketKey" close-mode locked-context :instruments="[position]" :accounts="[account]" :symbol="position" :account="account" :quote="quote" :paused="paused" :initial-order="initialOrder" @order="submit" /></template>
+    <template #order><OrderTicket v-if="modelValue && position && account" :key="ticketKey" close-mode locked-context :instruments="[position]" :accounts="[account]" :broker-accounts="brokerAccounts" :symbol="position" :account="account" :quote="quote" :paused="paused" :initial-order="initialOrder" @order="submit" /></template>
   </PositionOrderDialog>
 </template>
 

@@ -142,7 +142,6 @@
 .variants-app .order-totals .total-item{display:flex;align-items:baseline;justify-content:space-between;gap:6px;min-width:0;color:inherit}
 .variants-app .order-totals .total-item span{min-width:0;white-space:nowrap;color:inherit}
 .variants-app .order-totals .total-item b{min-width:0;color:inherit;font:inherit;font-weight:400;overflow-wrap:anywhere;text-align:right}
-.variants-app .order-totals .total-notional{grid-column:1/-1}
 .variants-app .amount-input-row>span{display:grid;place-items:center;align-self:stretch;width:68px;border:1px solid #3b3f46;border-left:0;border-radius:0 3px 3px 0;color:#c2c6ce;font-size:14px;font-weight:500;line-height:1}
 .variants-app .quantity-input-row>.el-select .el-select__selected-item{font-size:14px}
 .variants-app .amount-input-row .el-input-number .el-input__wrapper{border-radius:3px 0 0 3px}
@@ -189,7 +188,6 @@
 .variants-app .order-account-block .field-caption{color:#e8eaed}
 .variants-app .order-account-block .el-select__caret{color:#b7bec8}
 .variants-app .order-totals{grid-template-columns:minmax(0,1fr);gap:6px}
-.variants-app .order-totals .total-notional{grid-column:auto}
 .instrument-popper{max-width:calc(100vw - 24px)!important}
 .variants-app .ticket-assets{display:grid!important;grid-template-rows:22px minmax(0,1fr);grid-template-columns:1fr!important;height:74px!important;padding:0!important}
 .variants-app .ticket-assets .asset-summary-heading{display:flex;align-items:center;justify-content:space-between;padding:0 10px;border-bottom:1px solid #303338;color:#9ca4af;font-size:10px}
@@ -237,7 +235,6 @@
 .variants-app .order-totals .total-item:nth-child(even){text-align:right}
 .variants-app .order-totals .total-item span,.variants-app .order-totals .total-item b{display:block;text-align:inherit}
 .variants-app .order-totals .total-item b{margin-top:4px}
-.variants-app .order-totals .total-notional{grid-column:1/-1;text-align:left!important}
 .variants-app .trade-dock,.variants-app .dock-left .trade-dock,.variants-app .dock-bottom .trade-dock,.variants-app .trade-dock.floating{grid-template-rows:minmax(0,1fr) 74px}
 .variants-app .trade-dock.assets-collapsed{grid-template-rows:minmax(0,1fr) 28px}
 .variants-app .trade-dock.assets-collapsed .ticket-assets{height:28px!important}
@@ -249,7 +246,7 @@
 .variants-app .ticket-assets .asset-collapse:hover{border-color:#bb984a;background:#353026;color:#e1c36f}
 .variants-app .ticket-assets .asset-collapse .el-icon{font-size:12px}
 .variants-app .ticket-assets.is-collapsed .asset-collapse .el-icon{transform:rotate(180deg)}
-.variants-app .ticket-assets .asset-summary-grid{grid-template-columns:minmax(0,1fr);grid-template-rows:repeat(2,minmax(0,1fr));gap:0!important}
+.variants-app .ticket-assets .asset-summary-grid{grid-template-columns:minmax(0,1fr);grid-template-rows:repeat(3,minmax(0,1fr));gap:0!important}
 .variants-app .ticket-assets .asset-summary-grid .asset-metric{display:grid!important;grid-template-columns:minmax(0,1fr) auto auto;grid-template-rows:1fr;align-items:center;height:auto!important;padding:0 12px!important}
 .variants-app .ticket-assets .asset-summary-grid .asset-metric+.asset-metric{border-top:1px solid #303338;border-left:0}
 .variants-app .ticket-assets .asset-summary-grid .asset-metric>span{grid-column:auto;font-size:12px!important}
@@ -258,8 +255,8 @@
 .variants-app .trade-dock,.variants-app .dock-left .trade-dock,.variants-app .dock-bottom .trade-dock,.variants-app .trade-dock.floating{grid-template-rows:minmax(0,1fr) 98px}
 .variants-app .trade-dock.assets-collapsed{grid-template-rows:minmax(0,1fr) 34px}
 .variants-app .trade-dock.assets-collapsed .ticket-assets{height:34px!important}
-.variants-app .ticket-assets{grid-template-rows:34px minmax(0,1fr);height:98px!important}
-.variants-app .ticket-assets>.asset-summary-heading{height:34px!important;padding:0 12px!important}
+.variants-app .ticket-assets{grid-template-rows:28px minmax(0,1fr);height:98px!important}
+.variants-app .ticket-assets>.asset-summary-heading{height:28px!important;padding:0 12px!important}
 .variants-app .ticket-assets .asset-summary-heading{gap:16px}
 .variants-app .ticket-assets .asset-collapse{width:24px;height:24px;border:0;background:transparent}
 .variants-app .ticket-assets .asset-collapse:hover{border:0;background:#ffffff0d}
@@ -269,7 +266,6 @@
 .variants-app .order-totals .total-item:nth-child(even){align-items:flex-end}
 .variants-app .order-totals .total-item span{font-size:11px;color:#8f98a4;line-height:1.2}
 .variants-app .order-totals .total-item b{margin:0;font-size:13px;line-height:1.2;white-space:nowrap;color:#c8ced7}
-.variants-app .order-totals .total-notional{grid-column:1/-1;display:flex;flex-direction:row;align-items:baseline;justify-content:space-between;padding-top:9px;border-top:1px solid #2c3036}
 .variants-app .quantity-block .field-caption{position:relative}
 .variants-app .quantity-block .field-caption>label{flex:0 0 auto;white-space:nowrap}
 .variants-app .quantity-block .lot-error{display:block;margin-top:4px;color:#f05f66;font-size:11px;line-height:16px;white-space:nowrap}
@@ -286,12 +282,9 @@
 .variants-app .order-totals{margin-top:14px;padding-top:0;border-top:0;gap:14px 20px}
 .variants-app .order-totals .total-item,.variants-app .order-totals .total-item:nth-child(even){align-items:stretch;text-align:left}
 .variants-app .order-totals .total-item span,.variants-app .order-totals .total-item b{text-align:left}
-.variants-app .total-notional{display:flex;align-items:baseline;justify-content:space-between;margin-top:14px;padding-top:10px;border-top:1px solid #303338;color:#8f98a4}
-.variants-app .total-notional span{font-size:11px;line-height:1.2}
-.variants-app .total-notional b{font-size:13px;line-height:1.2;color:#c8ced7;font-weight:400}
-.variants-app .trade-dock,.variants-app .dock-left .trade-dock,.variants-app .dock-bottom .trade-dock,.variants-app .trade-dock.floating{grid-template-rows:minmax(0,1fr) 106px}
-.variants-app .ticket-assets{height:106px!important}
-.variants-app .ticket-assets .asset-summary-grid{gap:16px!important;padding:10px 12px!important}
+.variants-app .trade-dock,.variants-app .dock-left .trade-dock,.variants-app .dock-bottom .trade-dock,.variants-app .trade-dock.floating{grid-template-rows:minmax(0,1fr) 142px}
+.variants-app .ticket-assets{height:142px!important}
+.variants-app .ticket-assets .asset-summary-grid{gap:14px!important;padding:13px 12px!important}
 .variants-app .ticket-assets .asset-summary-grid .asset-metric{min-height:0;padding:0!important}
 .variants-app .ticket-assets .asset-summary-grid .asset-metric+.asset-metric{border-top:0!important}
 .variants-app .order-type-row{height:32px}
@@ -310,6 +303,8 @@
 .variants-app .ticket-assets .asset-summary-grid .asset-metric{grid-template-columns:minmax(0,1fr) max-content 30px!important;column-gap:6px!important}
 .variants-app .ticket-assets .asset-summary-grid .asset-metric>b,.variants-app .ticket-assets .asset-summary-grid .asset-metric .asset-number{justify-self:end;font-size:14px!important}
 .variants-app .ticket-assets .asset-summary-grid .asset-metric>small{width:30px;text-align:right;font-size:12px!important}
+.variants-app .ticket-assets .asset-metric.is-profit .asset-number,.asset-large-value.is-profit{color:var(--ft-color-up)!important}
+.variants-app .ticket-assets .asset-metric.is-loss .asset-number,.asset-large-value.is-loss{color:var(--ft-color-down)!important}
 .asset-value-popper{padding:8px 10px!important;border:1px solid #3b3f46!important;background:#202226!important;box-shadow:0 8px 20px #0008!important}
 .asset-large-value{display:inline-flex;align-items:center;gap:4px;color:#e3e6eb;font-size:14px;line-height:24px;font-variant-numeric:tabular-nums}
 .asset-large-value b{font-weight:500}
@@ -417,15 +412,17 @@
     border-radius:4px!important;
     background:#1e2023!important;
   }
-  .variants-app .dock-bottom .ticket-assets{grid-template-columns:132px minmax(0,1fr) minmax(0,1fr)!important;grid-template-rows:1fr!important}
-  .variants-app .dock-bottom .ticket-assets>.asset-summary-heading{height:auto!important;padding:0 10px!important;border-bottom:0!important;border-right:1px solid #303338!important}
+  .variants-app .dock-bottom .ticket-assets{grid-template-columns:132px repeat(3,minmax(0,1fr))!important;grid-template-rows:1fr!important}
+  .variants-app .dock-bottom .ticket-assets>.asset-summary-heading{height:auto!important;padding:0 10px!important;border-bottom:0!important;border-right:0!important}
   .variants-app .dock-bottom .ticket-assets .asset-summary-heading>span{font-size:11px!important}
   .variants-app .dock-bottom .ticket-assets .asset-summary-grid{display:contents!important}
-  .variants-app .dock-bottom .ticket-assets .asset-summary-grid .asset-metric{grid-template-columns:minmax(0,1fr) max-content 30px!important;grid-template-rows:1fr!important;padding:0 12px!important}
-  .variants-app .dock-bottom .ticket-assets .asset-summary-grid .asset-metric+.asset-metric{border-top:0!important;border-left:1px solid #303338!important}
-  .variants-app .dock-bottom .ticket-assets .asset-summary-grid .asset-metric>span{grid-column:auto!important;font-size:10px!important}
+  .variants-app .dock-bottom .ticket-assets .asset-summary-grid .asset-metric{grid-template-columns:minmax(0,1fr) 30px!important;grid-template-rows:16px 18px!important;align-content:center;padding:0 10px!important}
+  .variants-app .dock-bottom .ticket-assets .asset-summary-grid .asset-metric+.asset-metric{border-top:0!important;border-left:0!important}
+  .variants-app .dock-bottom .ticket-assets .asset-summary-grid .asset-metric>span{grid-column:1/-1!important;font-size:10px!important}
   .variants-app .dock-bottom .ticket-assets .asset-summary-grid .asset-metric>b,.variants-app .dock-bottom .ticket-assets .asset-summary-grid .asset-metric .asset-number{font-size:13px!important}
   .variants-app .dock-bottom .ticket-assets .asset-summary-grid .asset-metric>small{font-size:10px!important}
+  .variants-app .dock-bottom .trade-dock.assets-collapsed{grid-template-rows:minmax(0,1fr) 34px!important}
+  .variants-app .dock-bottom .trade-dock.assets-collapsed .ticket-assets{height:34px!important}
   .variants-app .dock-bottom .ticket-pane .order-form{
     grid-template-columns:172px 174px minmax(230px,1fr) 176px minmax(220px,.8fr) 254px!important;
     grid-template-rows:64px minmax(0,1fr)!important;
@@ -466,7 +463,6 @@
 .variants-app .positions-pane .el-table td{height:34px!important}.variants-app .positions-pane .el-table td .cell{line-height:20px}.variants-app .positions-pane .row-actions button{width:20px!important;height:22px!important}.variants-app .orders-table .order-row-actions button{width:20px;height:22px;font-size:10px;line-height:22px}
 .message-center-dialog .message-header-actions>.message-close-action{display:grid;place-items:center;width:28px;height:28px;padding:0;border:0;border-radius:4px;background:transparent;color:#aebaca;cursor:pointer}.message-center-dialog .message-header-actions>.message-close-action:hover{border:0;background:#303237;color:#aebaca}.message-center-dialog .message-header-actions>.message-close-action .el-icon{font-size:14px}
 .variants-app .positions-pane .row-actions button,.variants-app .orders-table .order-row-actions button{font-weight:400}
-.variants-app .total-notional b{font-family:'D-DIN Exp','DIN Alternate','Arial Narrow',sans-serif;font-variant-numeric:tabular-nums}
 .transaction-toast-instrument{font-size:14px!important}.transaction-toast-instrument small{font-size:13px!important}.transaction-toast-instrument em{font-size:12px!important}
 .transaction-toast-instrument{line-height:22px!important}.transaction-toast-instrument em{display:inline-flex;align-items:center;box-sizing:border-box;height:22px;padding:0 5px!important;line-height:1}.transaction-toast-instrument em .el-icon{margin-right:3px;font-size:12px}.transaction-toast-instrument em.is-success{border-color:#4a7664;background:#24332d;color:#80b79e}.transaction-toast-instrument em.is-partial{border-color:#785c41;background:#362c24;color:#d89b61}.transaction-toast-instrument em.is-rejected{border-color:#784d55;background:#38272c;color:#cf7b86}.transaction-toast-instrument em.is-reported{border-color:#527186;background:#26333b;color:#8ab9d2}
 .transaction-toast-instrument em{border-color:transparent!important}.transaction-toast-instrument em.is-review{background:#30343a;color:#b4bdc8}.message-center-dialog .message-title-row em{border-color:transparent!important;background:#30343a;color:#b4bdc8}.message-center-dialog .message-item.is-通知 .message-title-row em{background:#403820;color:#e3c370}.message-center-dialog .message-item.is-消息 .message-title-row em{background:#263844;color:#90c4df}.message-center-dialog .message-item.is-待办 .message-title-row em{background:#253c34;color:#8cc5a9}
@@ -565,12 +561,15 @@
 .variants-app .positions-tabs .global-account-filter{flex:0 0 184px;width:184px;margin-left:auto}.variants-app .global-account-filter .el-select__wrapper{min-height:28px;padding:0;background:transparent!important;box-shadow:none!important;justify-content:flex-end}.variants-app .global-account-filter .el-select__selection{flex:1 1 auto;min-width:0;margin-left:auto;justify-content:flex-end}.variants-app .global-account-filter .el-select__selected-item{min-width:0}.variants-app .global-account-filter .el-tag.is-closable{height:18px;max-width:100%;padding:0;border:0!important;background:transparent!important;color:#c8d0da!important}.variants-app .global-account-filter .el-tag.is-closable .el-tag__content{overflow:visible;text-overflow:clip;white-space:nowrap}.variants-app .global-account-filter .el-tag__close{display:none!important}.variants-app .global-account-filter .el-tag:not(.is-closable){height:18px;padding:0 5px;border:1px solid #53606d!important;border-radius:3px;background:#303840!important;color:#d9e3ec!important;font-size:10px;line-height:16px}.variants-app .global-account-filter .el-select__suffix{flex:0 0 auto;margin-left:6px!important}
 .global-account-popper .account-dropdown-search,.order-account-popper .account-dropdown-search{padding:7px 10px;border-bottom:1px solid #3a3f47}.global-account-popper .account-dropdown-search .el-input__wrapper,.order-account-popper .account-dropdown-search .el-input__wrapper{min-height:28px;background:#1f2227;box-shadow:0 0 0 1px #464c55 inset}.global-account-popper .account-dropdown-search .el-input__inner,.order-account-popper .account-dropdown-search .el-input__inner{color:#dbe1e8;font-size:12px}.global-account-popper .account-dropdown-search .el-input__inner::placeholder,.order-account-popper .account-dropdown-search .el-input__inner::placeholder{color:#747e8b}
 .variants-app .order-context-block .order-account-block .el-select__wrapper{justify-content:flex-end!important}.variants-app .order-context-block .order-account-block .el-select__selection{flex:1 1 auto;min-width:0;margin-left:auto;justify-content:flex-end}.variants-app .order-context-block .order-account-block .el-select__selected-item{min-width:0;text-align:right}.variants-app .order-context-block .order-account-block .el-select__suffix{flex:0 0 auto;margin-left:8px!important}
+.variants-app .order-context-block .order-broker-account-block{grid-template-columns:104px minmax(0,1fr)}.variants-app .order-context-block .order-broker-account-block .field-caption{white-space:nowrap}
 .variants-app .order-context-block .order-counterparty-block .el-select__placeholder{color:#c2c6ce!important}
 .variants-app .order-type-row .order-type,.variants-app .quantity-mode{border:0!important;background:transparent!important;box-shadow:none!important;overflow:visible!important}.variants-app .order-type-row .el-radio-button__inner,.variants-app .quantity-mode .el-radio-button__inner{border:1px solid #393e46!important;box-shadow:none!important}.variants-app .order-type-row .el-radio-button+.el-radio-button .el-radio-button__inner,.variants-app .quantity-mode .el-radio-button+.el-radio-button .el-radio-button__inner{margin-left:-1px!important}.variants-app .order-type-row .el-radio-button.is-active .el-radio-button__inner,.variants-app .quantity-mode .el-radio-button.is-active .el-radio-button__inner{position:relative;z-index:1;border-color:#bb984a!important;box-shadow:none!important}
 .variant-popper .instrument-select-header>b{display:none}.variant-popper .instrument-history>span{display:block;margin-bottom:6px;color:#d5d9df;font-size:12px;line-height:18px}.variant-popper .instrument-history>div{display:flex;flex-wrap:wrap;gap:4px}.variant-popper .instrument-history-chip{display:inline-flex;min-width:0;max-width:100%}.variant-popper .instrument-history .instrument-history-select{max-width:180px;height:24px;padding:3px 6px;border-radius:2px 0 0 2px;background:#25282d;color:#d5d9df;font-size:12px;line-height:14px}.variant-popper .instrument-history .instrument-history-remove{display:grid;place-items:center;flex:0 0 22px;width:22px;height:24px;margin-left:-1px;padding:0;border-radius:0 2px 2px 0;background:#25282d;color:#9da6b2;font-size:16px;line-height:1}.variant-popper .instrument-history .instrument-history-select:hover,.variant-popper .instrument-history-chip:hover .instrument-history-select{border-color:#bb984a;color:#e1c36f}.variant-popper .instrument-history .instrument-history-remove:hover{position:relative;z-index:1;border-color:#bb984a;color:#e1c36f}
 .variant-popper .instrument-history{margin-top:0;padding:0 10px;border-top:0}.variant-popper .instrument-market-tabs{margin:8px 16px 0;padding-top:0;border-top:0}.variant-popper .instrument-history>div{gap:4px}.variant-popper .instrument-history-chip{display:flex;flex:0 0 calc((100% - 4px)/2);width:calc((100% - 4px)/2);max-width:calc((100% - 4px)/2);height:24px;border:1px solid #3b3f46;border-radius:2px;background:#25282d;overflow:hidden}.variant-popper .instrument-history .instrument-history-select{flex:1;min-width:0;max-width:none;height:22px;padding:3px 6px;border:0!important;border-radius:0;background:transparent;color:#d5d9df;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.variant-popper .instrument-history .instrument-history-remove{flex:0 0 22px;width:22px;height:22px;margin:0;border:0!important;border-left:1px solid #3b3f46!important;border-radius:0;background:transparent;color:#9da6b2}.variant-popper .instrument-history-chip:hover{border-color:#bb984a;background:#353026}.variant-popper .instrument-history-chip:hover .instrument-history-select,.variant-popper .instrument-history-chip:hover .instrument-history-remove{color:#e1c36f}.variant-popper .instrument-history-chip:hover .instrument-history-remove{border-left-color:#bb984a!important}
 .variants-app .position-filters>.el-input,.variants-app .order-filters>.el-input{height:28px}.variants-app .position-filters>.el-input .el-input__wrapper,.variants-app .order-filters>.el-input .el-input__wrapper{box-sizing:border-box;height:28px!important;min-height:28px!important}
 .variants-app .orders-table th.order-price-gap-column .cell,.variants-app .orders-table td.order-price-gap-column .cell{padding-right:20px!important}
+.variants-app .positions-pane .orders-table th.frozen-margin-column .cell{padding-right:16px}
+.variants-app .positions-pane .orders-table td.frozen-margin-column .cell{padding-right:27px}
 .order-confirm .confirm-details .order-confirm-tag{display:inline-flex;align-items:center;height:20px;padding:0 7px;border:1px solid #555c67;border-radius:3px;background:#30343a;color:#d3d9e1;font-size:11px;line-height:18px}
 body .el-dialog__footer{display:flex;align-items:center;justify-content:center;gap:8px}
 
@@ -620,7 +619,7 @@ body .el-dialog__footer{display:flex;align-items:center;justify-content:center;g
 
 .variants-app .order-filters .table-toolbar-actions{flex:0 0 auto;margin-left:auto;flex-wrap:nowrap;white-space:nowrap}
 .variants-app .order-type-tag{display:inline-flex;align-items:center;justify-content:center;min-width:42px;height:20px;padding:0 4px;border:1px solid #485665;border-radius:2px;background:#2a333d;color:#b8cad9;font-size:11px;font-weight:400;line-height:18px;white-space:nowrap}.variants-app .order-type-tag.is-manual{border-color:#6c5b36;background:#383125;color:#dfc170}
-.variants-app .amend-original-metrics{grid-template-columns:repeat(4,minmax(0,1fr));justify-content:normal;column-gap:0}.variants-app .amend-original-metrics>div:first-child b{max-width:92px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px}.variants-app .amend-order-form{gap:14px}.variants-app .amend-order-form .amend-order-context{justify-content:flex-start;color:#a8b1bc;font-size:11px}.variants-app .amend-order-direction{display:inline-flex;align-items:center;height:22px;padding:0 7px;border:1px solid #485665;border-radius:3px;background:#273039;color:#b8cad9;line-height:20px}.variants-app .amend-order-type{display:inline-flex;align-items:center;justify-content:center;height:20px;padding:0 7px;border:1px solid #bb984a;border-radius:3px;background:#353026;color:#e1c36f;font-size:10px;font-weight:400;line-height:18px;box-sizing:border-box;box-shadow:none}.variants-app .amend-order-form .field-caption .amend-order-type{margin-left:auto}.variants-app .amend-order-form .quantity-input-row{height:36px;align-items:stretch}.variants-app .amend-order-form .quantity-input-row>.el-input-number{height:36px}.variants-app .amend-order-form .quantity-input-row>.el-input-number .el-input__wrapper,.variants-app .amend-order-form .quantity-input-row>span{box-sizing:border-box;height:36px;min-height:36px}.variants-app .amend-order-form .quantity-input-row>span{display:grid;place-items:center;width:68px;border:1px solid #3b3f46;border-left:0;border-radius:0 3px 3px 0;color:#c2c6ce;font-size:14px;font-weight:500}.variants-app .amend-order-hint{min-height:16px;margin:5px 0 0;color:#8f98a4;font-size:11px;line-height:16px}.variants-app .amend-order-hint.is-error{color:#e58a94}.variants-app .amend-order-capacity{display:flex;align-items:baseline;justify-content:space-between;margin-top:6px;color:#8f98a4;font-size:11px;line-height:16px}.variants-app .amend-order-capacity b{color:#c8ced7;font-size:12px;font-weight:500}.variants-app .amend-order-summary{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px 20px;margin-top:10px;padding-top:4px;color:#8f98a4;font-size:11px}.variants-app .amend-order-summary>div{display:flex;flex-direction:column;gap:4px}.variants-app .amend-order-summary>div:nth-child(2){align-items:flex-end}.variants-app .amend-order-summary b{margin:0;color:#c8ced7;font-size:13px;font-weight:500;line-height:1.2}
+.variants-app .amend-original-metrics{grid-template-columns:repeat(4,minmax(0,1fr));justify-content:normal;column-gap:0}.variants-app .amend-original-metrics>div:first-child b{max-width:92px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px}.variants-app .amend-order-form{gap:16px;color:#e8eaed;font-size:12px}.variants-app .amend-order-form .amend-order-context{justify-content:flex-start;color:#a8b1bc;font-size:11px}.variants-app .amend-order-direction{display:inline-flex;align-items:center;height:22px;padding:0 7px;border:1px solid #485665;border-radius:3px;background:#273039;color:#b8cad9;line-height:20px}.variants-app .amend-order-type{display:inline-flex;align-items:center;justify-content:center;height:20px;padding:0 7px;border:1px solid #bb984a;border-radius:3px;background:#353026;color:#e1c36f;font-size:10px;font-weight:400;line-height:18px;box-sizing:border-box;box-shadow:none}.variants-app .amend-order-form .field-caption .amend-order-type{margin-left:auto}.variants-app .amend-order-hint{min-height:16px;margin:5px 0 0;color:#8f98a4;font-size:11px;line-height:16px}.variants-app .amend-order-hint.is-error{color:#e58a94}.variants-app .amend-order-capacity{display:flex;align-items:baseline;justify-content:space-between;margin-top:6px;color:#8f98a4;font-size:11px;line-height:16px}.variants-app .amend-order-capacity b{color:#c8ced7;font-size:12px;font-weight:500}.variants-app .amend-order-summary{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px 20px;margin-top:10px;padding-top:4px;color:#8f98a4;font-size:11px}.variants-app .amend-order-summary>div{display:flex;flex-direction:column;gap:4px}.variants-app .amend-order-summary>div:nth-child(2){align-items:flex-end}.variants-app .amend-order-summary b{margin:0;color:#c8ced7;font-size:13px;font-weight:500;line-height:1.2}
 
 /* 设置弹窗的操作组必须按整个 footer 背景居中，而不是按内容区宽度。 */
 .equity-settings-dialog .el-dialog__footer{display:block!important;box-sizing:border-box!important;height:52px!important;padding:0!important}.equity-settings-dialog .settings-footer{display:flex;width:100%;height:100%;align-items:center;justify-content:center;gap:8px}
@@ -638,3 +637,14 @@ body .el-dialog__footer{display:flex;align-items:center;justify-content:center;g
 .variants-app .positions-tabs .workspace-restore-ticket,.variants-app .positions-tabs .workspace-restore-ticket:hover,.variants-app .positions-tabs .workspace-restore-ticket .restore-panel-label,.variants-app .positions-tabs .workspace-restore-ticket:hover .restore-panel-label{color:#bc994a!important}.variants-app .positions-tabs .workspace-restore-ticket .restore-panel-icon{filter:invert(62%) sepia(31%) saturate(732%) hue-rotate(3deg) brightness(93%) contrast(88%)}
 
 .variants-app .ticket-layout-actions{display:flex;align-items:center;gap:2px}.variants-app .reset-ticket-layout{display:grid;width:26px;height:26px;padding:0;place-items:center;border:0;border-radius:3px;background:transparent;color:#9ba3af;cursor:pointer}.variants-app .reset-ticket-layout:hover,.variants-app .reset-ticket-layout:focus-visible{background:#31343a;color:#e1c36f;outline:0}.variants-app .reset-ticket-layout .reset-layout-icon{width:14px;height:14px;stroke:currentColor;stroke-linecap:round;stroke-linejoin:round;stroke-width:1.35}body .el-popper.ticket-reset-popper{padding:6px 9px!important;border:1px solid #3b3f46!important;border-radius:3px!important;background:#24272c!important;color:#d9dfe7!important;box-shadow:0 8px 22px #0009!important;font-size:11px!important;line-height:16px!important}body .el-popper.ticket-reset-popper .el-popper__arrow{display:none!important}
+
+/* Bottom docking needs the full workspace width before its three-row asset summary can be read. */
+@media(max-width:1250px){
+  .variants-app .variants-workspace.dock-bottom{grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(160px,1fr) 390px}
+  .variants-app .dock-bottom .trade-dock{grid-template-columns:minmax(300px,.36fr) minmax(0,1fr)}
+}
+@media(max-width:850px){
+  .variants-app .variants-workspace.dock-bottom{grid-template-areas:'positions' 'trade'}
+  .variants-app .dock-bottom .trade-dock{grid-template-columns:minmax(0,1fr);grid-template-areas:'ticket' 'assets'}
+  .variants-app .dock-bottom .trade-dock .book-pane{display:none}
+}

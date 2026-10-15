@@ -5,6 +5,7 @@ const props = defineProps({
   modelValue: { type: Array, required: true },
   options: { type: Array, required: true },
   defaults: { type: Array, required: true },
+  labelOverrides: { type: Object, default: () => ({}) },
 })
 const emit = defineEmits(['update:modelValue'])
 const visible = ref(false)
@@ -23,7 +24,7 @@ const labelOverrides = {
   entrustNo: '订单编号',
   orderTime: '订单时间',
 }
-const optionLabels = computed(() => new Map(props.options.map(([key, label]) => [key, labelOverrides[key] || label])))
+const optionLabels = computed(() => new Map(props.options.map(([key, label]) => [key, props.labelOverrides[key] || labelOverrides[key] || label])))
 
 function orderedKeys(first) {
   const knownKeys = props.options.map(([key]) => key)

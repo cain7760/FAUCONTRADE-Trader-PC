@@ -3,7 +3,7 @@ import { ref, watch } from 'vue'
 import OrderTicket from './OrderTicket.vue'
 import PositionOrderDialog from './PositionOrderDialog.vue'
 
-const props = defineProps({ modelValue: Boolean, position: Object, order: Object, account: Object, paused: Boolean })
+const props = defineProps({ modelValue: Boolean, position: Object, order: Object, account: Object, paused: Boolean, brokerAccounts: { type: Array, default: () => [] } })
 const emit = defineEmits(['update:modelValue', 'submit'])
 const quote = ref(null)
 const initialOrder = ref(null)
@@ -22,6 +22,8 @@ watch(() => props.modelValue, visible => {
     quantity: undefined,
     quantityMode: order?.inputAmount != null ? 'amount' : 'quantity',
     amount: order?.inputAmount ?? undefined,
+    brokerAccountId: order?.brokerAccountId ?? props.position?.brokerAccountId ?? null,
+    brokerAccountLabel: order?.brokerAccountLabel ?? props.position?.brokerAccountLabel ?? null,
     sourceOrderSide: 'buy',
     note: order?.note || '',
   }
@@ -43,7 +45,7 @@ function submit(order) {
 <template>
   <PositionOrderDialog :model-value="modelValue" title="追单" class="chase-dialog" hide-metrics :position="position" :account="account" @update:model-value="emit('update:modelValue', $event)" @quote="quote = $event">
     <template #order>
-      <OrderTicket v-if="modelValue && position && account" :key="ticketKey" locked-context :instruments="[position]" :accounts="[account]" :symbol="position" :account="account" :quote="quote" :paused="paused" :initial-order="initialOrder" @order="submit" />
+      <OrderTicket v-if="modelValue && position && account" :key="ticketKey" locked-context :instruments="[position]" :accounts="[account]" :broker-accounts="brokerAccounts" :symbol="position" :account="account" :quote="quote" :paused="paused" :initial-order="initialOrder" @order="submit" />
     </template>
   </PositionOrderDialog>
 </template>
