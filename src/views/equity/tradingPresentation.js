@@ -7,7 +7,7 @@ export const orderActivityHint = '原为反馈信息（系统反馈的信息）�
 
 export function orderValueWithUnit(row) {
   return row.inputAmount !== null && row.inputAmount !== undefined
-    ? moneyWithUnit(row.orderValueNumber ?? row.inputAmount)
+    ? `${money(row.orderValueNumber ?? row.inputAmount)} 元`
     : sharesWithUnit(row.quantity)
 }
 

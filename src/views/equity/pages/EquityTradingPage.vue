@@ -80,6 +80,7 @@ function detachTab(id, clientX, clientY) {
     y: Math.max(minY, Math.min(clientY - bounds.top - 18, bounds.height - height)),
     width,
     height,
+    maximized: false,
     zIndex: ++topWindowLevel,
     accountIds: [...selectedAccountIds.value],
     previousAccountIds: [...selectedAccountIds.value],
@@ -91,6 +92,20 @@ function detachTab(id, clientX, clientY) {
 function restoreTab(id) {
   delete detachedTabs[id]
   tab.value = id
+}
+
+function toggleWindowMaximize(id) {
+  const floatingTab = detachedTabs[id]
+  if (!floatingTab) return
+  floatingTab.maximized = !floatingTab.maximized
+  bringTabForward(id)
+}
+
+function detachedWindowStyle(id) {
+  const floatingTab = detachedTabs[id]
+  return floatingTab.maximized
+    ? { left: '0', top: '0', width: '100vw', height: '100vh', zIndex: floatingTab.zIndex }
+    : { left: `${floatingTab.x}px`, top: `${floatingTab.y}px`, width: `${floatingTab.width}px`, height: `${floatingTab.height}px`, zIndex: floatingTab.zIndex }
 }
 
 function updateDetachedAccountSelection(id, ids) {
@@ -165,7 +180,7 @@ function beginTabDrag(id, event) {
 }
 
 function beginWindowDrag(id, event) {
-  if (event.button !== 0 || event.target.closest('button')) return
+  if (event.button !== 0 || detachedTabs[id].maximized || event.target.closest('button')) return
   event.preventDefault()
   bringTabForward(id)
   restoreDropTarget.value = null
@@ -187,7 +202,7 @@ function beginWindowDrag(id, event) {
 }
 
 function beginWindowResize(id, event) {
-  if (event.button !== 0) return
+  if (event.button !== 0 || detachedTabs[id].maximized) return
   event.preventDefault()
   event.stopPropagation()
   bringTabForward(id)
@@ -231,7 +246,7 @@ onBeforeUnmount(() => stopPointerTracking?.())
         <PositionsTable v-else-if="tab==='positions'" />
         <OrdersTable v-else-if="tab==='orders'" />
         <TradesTable v-else-if="tab==='trades'" />
-        <div v-else class="detached-empty">表格已悬浮，可从窗口右上角还原</div>
+        <div v-else class="detached-empty">表格已悬浮，关闭窗口可还原到标签栏</div>
       </section>
       <section class="trade-dock" :class="{floating:dock==='floating', resizing, 'assets-collapsed':assetsCollapsed}" :style="floatStyle">
         <OrderBook v-show="!collapsed" :symbol="selected" :compact="dock === 'bottom'" @drag="start" @quote="value=>{quote=value;collapsed=false}" />
@@ -252,13 +267,13 @@ onBeforeUnmount(() => stopPointerTracking?.())
         <button v-if="dock === 'floating'" type="button" class="floating-resize-handle" aria-label="调整下单面板高度" @pointerdown="startResize"><span></span></button>
       </section>
       <div v-if="dragging" class="dock-targets"><div class="dock-target target-left">停靠左侧</div><div class="dock-target target-right">停靠右侧</div><div class="dock-target target-bottom">停靠底部</div><span class="float-instruction">拖至边缘停靠 · 放在中间悬浮</span></div>
-      <section v-for="id in tabIds.filter(item => detachedTabs[item])" :key="id" class="positions-pane workspace-panel detached-tab-window" :style="{ left:`${detachedTabs[id].x}px`, top:`${detachedTabs[id].y}px`, width:`${detachedTabs[id].width}px`, height:`${detachedTabs[id].height}px`, zIndex:detachedTabs[id].zIndex }" @pointerdown="bringTabForward(id)">
-        <header class="detached-tab-header" @pointerdown="beginWindowDrag(id, $event)"><strong>{{ tabLabels[id] }}<span class="detached-tab-count">({{ tabCounts[id] }})</span></strong><el-select v-model="detachedTabs[id].accountIds" class="global-account-filter detached-account-filter" multiple collapse-tags :max-collapse-tags="1" placeholder="下单账户" :aria-label="`${tabLabels[id]}下单账户筛选`" popper-class="variant-popper global-account-popper" :offset="2" @pointerdown.stop @visible-change="visible => { if (!visible) detachedTabs[id].accountSearch = '' }" @change="ids => updateDetachedAccountSelection(id, ids)"><template #header><div class="account-dropdown-search" @click.stop><el-input v-model="detachedTabs[id].accountSearch" :prefix-icon="Search" placeholder="搜索下单账户" clearable /></div></template><el-option label="全部账户" :value="allAccountsValue" /><el-option v-for="option in filteredDetachedAccounts(id)" :key="option.id" :label="accountLabel(option.id)" :value="option.id" /></el-select><button type="button" :aria-label="`还原${tabLabels[id]}标签`" @pointerdown.stop @click="restoreTab(id)">还原</button></header>
+      <section v-for="id in tabIds.filter(item => detachedTabs[item])" :key="id" class="positions-pane workspace-panel detached-tab-window" :class="{ 'is-maximized': detachedTabs[id].maximized }" :style="detachedWindowStyle(id)" @pointerdown="bringTabForward(id)">
+        <header class="detached-tab-header" @pointerdown="beginWindowDrag(id, $event)"><strong>{{ tabLabels[id] }}<span class="detached-tab-count">({{ tabCounts[id] }})</span></strong><el-select v-model="detachedTabs[id].accountIds" class="global-account-filter detached-account-filter" multiple collapse-tags :max-collapse-tags="1" placeholder="下单账户" :aria-label="`${tabLabels[id]}下单账户筛选`" popper-class="variant-popper global-account-popper" :offset="2" @pointerdown.stop @visible-change="visible => { if (!visible) detachedTabs[id].accountSearch = '' }" @change="ids => updateDetachedAccountSelection(id, ids)"><template #header><div class="account-dropdown-search" @click.stop><el-input v-model="detachedTabs[id].accountSearch" :prefix-icon="Search" placeholder="搜索下单账户" clearable /></div></template><el-option label="全部账户" :value="allAccountsValue" /><el-option v-for="option in filteredDetachedAccounts(id)" :key="option.id" :label="accountLabel(option.id)" :value="option.id" /></el-select><div class="detached-window-actions"><button type="button" :aria-label="`${detachedTabs[id].maximized ? '还原' : '最大化'}${tabLabels[id]}窗口`" :title="detachedTabs[id].maximized ? '还原窗口' : '最大化窗口'" @pointerdown.stop @click="toggleWindowMaximize(id)"><svg v-if="detachedTabs[id].maximized" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M5 4V2.5h8.5V11H12M2.5 5H11v8.5H2.5z" /></svg><svg v-else viewBox="0 0 16 16" fill="none" aria-hidden="true"><rect x="2.5" y="2.5" width="11" height="11" /></svg></button><button type="button" class="detached-window-close" :aria-label="`关闭${tabLabels[id]}窗口并还原标签`" title="关闭窗口并还原标签" @pointerdown.stop @click="restoreTab(id)"><el-icon><Close /></el-icon></button></div></header>
         <InstructionTable v-if="id==='instructions'" :ref="setInstructionTableInstance" v-model:detail-height="instructionDetailHeight" :orders="demoOrders.filter(order => detachedAccountIds(id).includes(order.account))" :accounts="accounts" :can-chase="canChaseOrder" :can-amend="canAmendOrder" :can-cancel="canOperateOrder" :action-label="orderActionLabel" @chase="openOrderChase" @amend="openAmendOrder" @cancel="openCancelOrder" @bulk-cancel="openBulkCancel" />
         <PositionsTable v-else-if="id==='positions'" :account-ids="detachedAccountIds(id)" />
         <OrdersTable v-else-if="id==='orders'" :account-ids="detachedAccountIds(id)" />
         <TradesTable v-else :account-ids="detachedAccountIds(id)" />
-        <button type="button" class="detached-tab-resize" :aria-label="`调整${tabLabels[id]}窗口大小`" @pointerdown="beginWindowResize(id, $event)"></button>
+        <button v-if="!detachedTabs[id].maximized" type="button" class="detached-tab-resize" :aria-label="`调整${tabLabels[id]}窗口大小`" @pointerdown="beginWindowResize(id, $event)"></button>
       </section>
       <div v-if="tabDragPreview" class="tab-drag-preview" :style="{ left:`${tabDragPreview.x}px`, top:`${tabDragPreview.y}px` }">{{ tabDragPreview.label }} · 松开以悬浮</div>
     </div>
@@ -325,13 +340,18 @@ onBeforeUnmount(() => stopPointerTracking?.())
 .variants-app .tab-restore-cue{position:absolute;top:50%;left:12px;z-index:1;transform:translateY(-50%);padding:4px 8px;border-radius:2px;background:#302c24;color:#e1c36f;pointer-events:none}
 .variants-app .detached-empty{flex:1;display:grid;place-items:center;color:#818995;font-size:12px}
 .variants-app .detached-tab-window{grid-area:auto;position:absolute;border-color:#786846;box-shadow:0 14px 42px #000a}
+.variants-app .detached-tab-window.is-maximized{position:fixed;border-radius:0}
 .variants-app .detached-tab-header{height:36px;flex:0 0 36px;display:flex;align-items:center;gap:10px;padding:0 10px;border-bottom:1px solid #303338;background:#25282d;cursor:grab;touch-action:none;user-select:none}
 .variants-app .detached-tab-header:active{cursor:grabbing}
 .variants-app .detached-tab-header strong{font-size:12px;font-weight:600}
 .variants-app .detached-tab-count{margin-left:3px;color:#bb984a}
 .variants-app .detached-account-filter{width:148px;min-width:86px;flex:0 1 148px;margin-left:auto}
-.variants-app .detached-tab-header button{height:23px;padding:0 8px;border:1px solid #786846;border-radius:3px;background:#353026;color:#d6b877;cursor:pointer}
-.variants-app .detached-tab-header button:hover{background:#433927}
+.variants-app .detached-window-actions{display:flex;align-self:stretch;align-items:center;margin-right:-10px}
+.variants-app .detached-window-actions button{display:grid;place-items:center;width:34px;height:100%;padding:0;border:0;background:transparent;color:#c7cdd6;cursor:pointer}
+.variants-app .detached-window-actions button:hover{background:#3a3e45}
+.variants-app .detached-window-actions .detached-window-close:hover{background:#8b424d;color:#fff}
+.variants-app .detached-window-actions svg{width:14px;height:14px;stroke:currentColor;stroke-width:1.3;stroke-linecap:round;stroke-linejoin:round}
+.variants-app .detached-window-actions .el-icon{font-size:15px}
 .variants-app .detached-tab-resize{position:absolute;right:0;bottom:0;z-index:2;width:17px;height:17px;padding:0;border:0;background:linear-gradient(135deg,transparent 62%,#8f7947 63%,#8f7947 69%,transparent 70%);cursor:nwse-resize;touch-action:none}
 .variants-app .tab-drag-preview{position:fixed;z-index:79;padding:6px 10px;border:1px solid #bb984a;border-radius:3px;background:#302c24;color:#e1c36f;box-shadow:0 8px 24px #0008;pointer-events:none;white-space:nowrap}
 </style>

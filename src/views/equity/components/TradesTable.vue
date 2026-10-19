@@ -24,7 +24,7 @@ const displayedTrades = computed(() => props.accountIds ? sortTradeRows(tradesFo
           <TradingTable :key="`trades-${tableRefreshKey}`" class="original-fields orders-table trades-table" :data="displayedTrades" height="100%" :fit="false" empty-text="暂无成交记录" copyable-identifiers>
             <el-table-column type="index" label="序号" width="44" align="center" header-align="center" class-name="order-index-column" label-class-name="order-index-column" />
             <template v-for="columnKey in tradeVisibleColumnKeys" :key="columnKey">
-              <el-table-column v-if="columnKey === 'side'" prop="side" label="方向" width="64" align="left" header-align="left"><template #default="{row}"><span :class="row.side === 'buy' ? 'up' : 'down'">{{ row.side === 'buy' ? '买入' : '卖出' }}</span></template></el-table-column>
+              <el-table-column v-if="columnKey === 'side'" prop="side" label="方向" width="64" align="left" header-align="left"><template #default="{row}"><span :class="row.side === 'buy' ? 'up' : 'down'">{{ row.side === 'buy' ? '买' : '卖' }}</span></template></el-table-column>
               <el-table-column v-else-if="columnKey === 'openClose'" prop="openClose" label="开平方向" width="64" align="left" header-align="left"><template #default="{row}">{{ row.openClose === '开' ? '开仓' : '平仓' }}</template></el-table-column>
               <el-table-column v-else-if="columnKey === 'code'" prop="code" label="证券代码" width="68" />
               <el-table-column v-else-if="columnKey === 'name'" prop="name" label="证券名称" width="68" />

@@ -5,6 +5,7 @@ import { CircleCheck, CircleClose, Close, EditPen, More } from '@element-plus/ic
 import SettingsMenuIcon from '../../SettingsMenuIcon.vue'
 import { accounts, brokerAccounts } from './fixtures'
 import { marketInstruments, variantRows, variants, money, number, price as formatPrice } from './variantData'
+import { channelSources } from './channelSource'
 import { columnOptionsFor } from './tableFieldDefinitions'
 import { currencyFor, orderActivity } from './tradingPresentation'
 import { useTicketDock } from './useTicketDock'
@@ -115,35 +116,63 @@ const conversionRemark = ref('')
 const historyVisible = ref(false), historyRecord = ref(null)
 const tableRefreshKey = ref(0)
 const trsPoolExportRows = ref([])
-const orderStatusMachine = ['已撤', '暂停', '完成', '部成', '已报', '待报', '改单中', '异常', '拒绝', '其他']
-const orderStatusOptions = orderStatusMachine.map(status => ({ label: status, value: status }))
-const demoOrderStatuses = [...orderStatusMachine, '暂停', '已报', '待报', '完成', '异常', '其他']
+const orderStatusMachine = ['未报', '待报', '已报', '待撤', '待撤［部成］', '部撤', '撤单', '部成', '全成', '被拒绝', '已报待改', '待改［部成］', '待确认', '审核中', '审核拒绝', '待改审核', '待改［部成］', '待改［未报］', '待确认［待审核］']
+const orderStatusOptions = orderStatusMachine.map((status, index) => ({ key: index, label: status, value: status }))
+const demoOrderStatuses = ['撤单', '待撤', '全成', '部成', '已报', '待报', '已报待改', '被拒绝', '被拒绝', '未报', '待确认', '审核中', '待改审核', '全成', '待改［未报］', '待确认［待审核］']
+const amountOrderIndices = new Set([2, 3, 6, 11])
+const demoInstructionStatusCodes = ['6', '3', '8', '7', '2', '1', 'A', '9', '9', '0', '3', '2', '1', '8', '9', '0']
+function demoInstructionDetails(order) {
+  if (!['2', '3', '6', '7', '8', 'A'].includes(order.instructionStatusCode)) return { entrustments: [], deals: [] }
+  const lots = order.quantity / 100
+  const count = Math.min(6, lots)
+  let remainingFilled = order.filledQuantity
+  const entrustments = Array.from({ length: count }, (_, index) => {
+    const quantity = (Math.floor(lots / count) + (index < lots % count ? 1 : 0)) * 100
+    const filledQuantity = Math.min(quantity, remainingFilled)
+    remainingFilled -= filledQuantity
+    const status = filledQuantity === quantity ? '全成' : filledQuantity ? '部成'
+      : order.instructionStatusCode === '6' ? '撤单' : order.instructionStatusCode === '3' ? '待撤' : '已报'
+    return {
+      ...order, index: index + 1, status, quantity, filledQuantity,
+      reportQuantity: status === '已报' || status === '待撤' ? quantity - filledQuantity : 0,
+      canceledQuantity: status === '撤单' ? quantity : 0,
+      filledPrice: filledQuantity ? order.filledPrice : null,
+      entrustNo: `${order.orderNo}-${String(index + 1).padStart(2, '0')}`,
+      orderTime: `${order.orderTime.slice(0, 17)}${String(index * 3).padStart(2, '0')}`,
+      filledTime: filledQuantity ? `${order.orderTime.slice(0, 17)}${String(20 + index * 6).padStart(2, '0')}` : '',
+    }
+  })
+  const deals = entrustments.filter(row => row.filledQuantity > 0).map((row, index) => ({ ...row, index: index + 1 }))
+  return { entrustments, deals }
+}
 const demoOrders = ref(demoOrderStatuses.map((status, index) => {
   const instrument = variantRows[index % variantRows.length]
-  const quantity = (index + 1) * 100
-  const filledQuantity = status === '完成' ? quantity : status === '部成' ? Math.max(100, Math.floor(quantity / 2 / 100) * 100) : 0
+  const quantity = index === 0 ? 600 : (index + 1) * 100
+  const filledQuantity = status === '全成' ? quantity : status.includes('部成') ? Math.max(100, Math.floor(quantity / 2 / 100) * 100) : 0
   const price = index % 3 === 1 ? null : instrument.price
   const estimate = (price || instrument.price) * quantity
-  // 保留一条异常系统单供“转手工单”操作，后续异常样本仍为手工单以覆盖无转换入口的场景。
-  const executionType = status === '拒绝' || (status === '异常' && index !== orderStatusMachine.indexOf('异常')) || (status !== '异常' && index % 4 === 3) ? 'highTouch' : 'lowTouch'
+  const inputAmount = price !== null && amountOrderIndices.has(index) ? Number(estimate.toFixed(2)) : null
+  // 保留一条被拒绝的系统单供“转手工单”操作，其余同状态样本为手工单。
+  const executionType = (status === '被拒绝' ? index !== demoOrderStatuses.indexOf('被拒绝') : index % 4 === 3) ? 'highTouch' : 'lowTouch'
   const account = index < orderStatusMachine.length || index % 3 !== 1 ? 'TZS_T0' : 'TZS_T1'
   const brokerAccount = brokerAccounts[account === 'TZS_T1' ? 1 : 0]
-  return {
+  const order = {
     id: `seed-${index + 1}`, orderNo: `WT20260911${String(index + 1).padStart(3, '0')}`,
-    account, brokerAccountId: brokerAccount.id, brokerAccountLabel: brokerAccount.name, code: instrument.code, name: instrument.name, executionType, type: price === null ? 'market' : 'limit',
+    account, brokerAccountId: brokerAccount.id, brokerAccountLabel: brokerAccount.name, code: instrument.code, name: instrument.name, executionType, type: price === null ? 'market' : 'limit', source: channelSources.customer,
     orderType: executionType === 'highTouch' ? '手工单' : '系统单', algorithm: index % 3 === 0 ? 'POV' : 'DMA',
     orderRemark: executionType === 'highTouch' ? ['请按委托价格优先处理', '客户指定分批执行', '请关注盘中流动性'][index % 3] : '',
-    traderRemark: status === '拒绝' ? '拒绝原因：委托价格偏离当前市场价格，暂不具备执行条件。' : executionType === 'highTouch' ? filledQuantity ? status === '部成' ? '已核对部分成交，继续跟进剩余委托。' : '已核对最终成交结果。' : ['已受理，正在处理', '建议分批成交', '已反馈可执行价格'][index % 3] : '',
-    side: index % 2 ? 'sell' : 'buy', openClose: index % 3 ? '平' : '开', status,
-    attribute: `${price === null ? '市价' : '限价'}·数量`, quantity, price,
-    orderValueNumber: quantity, orderValue: `${number(quantity)} 股`, filledQuantity,
-    reportQuantity: status === '完成' ? 0 : Math.max(0, quantity - filledQuantity),
+    traderRemark: status === '被拒绝' ? '拒绝原因：委托价格偏离当前市场价格，暂不具备执行条件。' : executionType === 'highTouch' ? filledQuantity ? status === '部成' ? '已核对部分成交，继续跟进剩余委托。' : '已核对最终成交结果。' : ['已受理，正在处理', '建议分批成交', '已反馈可执行价格'][index % 3] : '',
+    side: index % 2 ? 'sell' : 'buy', openClose: index % 3 ? '平' : '开', status, instructionStatusCode: demoInstructionStatusCodes[index],
+    attribute: `${price === null ? '市价' : '限价'}·${inputAmount === null ? '数量' : '金额'}`, quantity, price, inputAmount,
+    orderValueNumber: inputAmount ?? quantity, orderValue: inputAmount === null ? `${number(quantity)} 股` : `${money(inputAmount)} CNY`, filledQuantity,
+    reportQuantity: ['已报', '待撤', '待撤［部成］', '部成', '已报待改', '待改［部成］'].includes(status) ? Math.max(0, quantity - filledQuantity) : 0,
     filledPrice: filledQuantity ? instrument.price : null, estimate,
-    canceledQuantity: status === '已撤' ? quantity - filledQuantity : 0,
-    frozenMargin: ['已撤', '暂停', '完成', '异常', '拒绝', '其他'].includes(status) ? 0 : estimate * .4,
-    marginRate: 40, feedback: status === '异常' ? '风控校验未通过' : status === '拒绝' ? '交易员已拒绝该手工单' : filledQuantity ? status === '部成' ? '部分成交回报已接收，剩余数量继续挂单。' : '全部成交回报已接收。' : '',
+    canceledQuantity: status === '撤单' ? quantity - filledQuantity : 0,
+    frozenMargin: ['撤单', '全成', '被拒绝', '审核拒绝'].includes(status) ? 0 : estimate * .4,
+    marginRate: 40, feedback: status === '审核拒绝' ? '审核未通过' : status === '被拒绝' ? '订单已被拒绝' : filledQuantity ? status === '全成' ? '全部成交回报已接收。' : '部分成交回报已接收，剩余数量继续挂单。' : '',
     market: instrument.market, orderTime: `2026-09-11 09:${String(30 + index).padStart(2, '0')}:00`,
   }
+  return { ...order, ...demoInstructionDetails(order) }
 }))
 const syncedHtPositions = ref([])
 const orderFilters = ref({ orderNo: '', symbol: '', side: 'ALL', openClose: 'ALL', orderType: 'ALL', status: [] })
@@ -284,7 +313,7 @@ function ordersForAccounts(accountIds) { return demoOrders.value.filter(o => acc
 const orders = computed(() => ordersForAccounts(effectiveAccountIds.value))
 function sortOrderRows(rows) {
   const { prop, direction } = orderSortState.value
-  const exceptionRank = row => row.status === '异常' ? (row.orderType === '系统单' ? 0 : 1) : 2
+  const exceptionRank = row => row.status === '被拒绝' ? (row.orderType === '系统单' ? 0 : 1) : 2
   const exceptionFirst = (a, b) => exceptionRank(a) - exceptionRank(b)
   if (!prop || !direction) return [...rows].sort(exceptionFirst)
   const multiplier = direction === 'ascending' ? 1 : -1
@@ -449,6 +478,7 @@ function enrichOrder(order) {
   const instrument = marketInstruments.find(item => item.code === order.code)
   return {
     ...order,
+    source: order.source ?? channelSources.trader,
     status: order.status || '待报', market: order.market || instrument?.market || 'SZ', orderTime: order.orderTime || timestampNow(),
     marginRate: order.marginRate ?? 40, frozenMargin: order.frozenMargin ?? (order.estimate || 0) * .4,
     canceledQuantity: order.canceledQuantity || 0, canceledAmount: order.canceledAmount || 0,
@@ -559,7 +589,7 @@ function exportPositions(rows = sortedRows.value) {
 function exportOrders(rows = orders.value) {
   const header = ['证券代码', '证券名称', '订单状态', '方向', '订单属性', '订单价格', '订单数量', '订单金额', '挂单数量', '已成数量', '成交均价', '成交金额', '撤单数量', '撤单金额', '冻结保证金', '保证金率', '订单编号', '订单时间', '下单账户', '市场', '币种', '订单类型', '执行算法', '下单备注', '订单动态', '开平方向']
   const records = rows.map(row => [
-    row.code, row.name, row.status, row.side === 'buy' ? '买入' : '卖出', row.type === 'market' ? '市价单' : '限价单',
+    row.code, row.name, row.status, row.side === 'buy' ? '买' : '卖', row.type === 'market' ? '市价单' : '限价单',
     row.price === null ? '--' : formatPrice(row.price, row.market), number(row.quantity), exportedOrderAmount(row), row.reportQuantity ? number(row.reportQuantity) : '--', row.filledQuantity ? number(row.filledQuantity) : '--', row.filledPrice === null ? '--' : formatPrice(row.filledPrice, row.market), filledAmount(row), row.canceledQuantity ? number(row.canceledQuantity) : '--', exportedCanceledAmount(row),
     money(row.frozenMargin || 0), `${row.marginRate || 0}%`, row.orderNo, row.orderTime, accountLabel(row.account), marketLabel(row.market), currencyFor(row), row.orderType || '--', row.algorithm || '--', row.orderRemark || '--', orderActivity(row), row.openClose === '开' ? '开仓' : '平仓',
   ])
@@ -568,7 +598,7 @@ function exportOrders(rows = orders.value) {
 function exportTrades(rows = sortedTrades.value) {
   const header = ['方向', '证券代码', '证券名称', '成交均价', '成交数量', '成交金额', '成交时间', '下单时间', '成交编号', '订单编号', '交易日期', '下单账户', '市场', '币种', '订单类型', '执行算法', '下单备注', '订单动态', '开平方向']
   const records = rows.map(row => [
-    row.side === 'buy' ? '买入' : '卖出', row.code, row.name, formatPrice(row.filledPrice, row.market), number(row.filledQuantity), money(row.filledAmount),
+    row.side === 'buy' ? '买' : '卖', row.code, row.name, formatPrice(row.filledPrice, row.market), number(row.filledQuantity), money(row.filledAmount),
     timeLabel(row.filledTime), timeLabel(row.orderTime), row.tradeNo, row.entrustNo, row.tradeDate, accountLabel(row.account), marketLabel(row.market), currencyFor(row), row.orderType || '--', row.algorithm || '--', row.orderRemark || '--', orderActivity(row), row.openClose === '开' ? '开仓' : '平仓',
   ])
   downloadCsv('成交记录.csv', header, records)
@@ -617,19 +647,17 @@ function toggleSort(prop) { const current = sortState.value; sortState.value = c
 function toggleOrderSort(prop) { const current = orderSortState.value; orderSortState.value = current.prop !== prop || current.direction === null ? { prop, direction: 'ascending' } : current.direction === 'ascending' ? { prop, direction: 'descending' } : { prop: null, direction: null } }
 function toggleTradeSort(prop) { const current = tradeSortState.value; tradeSortState.value = current.prop !== prop || current.direction === null ? { prop, direction: 'ascending' } : current.direction === 'ascending' ? { prop, direction: 'descending' } : { prop: null, direction: null } }
 function toggleOrderStatus(status) { const selected = orderFilters.value.status; orderFilters.value.status = selected.includes(status) ? selected.filter(value => value !== status) : [...selected, status] }
-function selectAllOrderStatuses() { orderFilters.value.status = [...orderStatusMachine] }
-function invertOrderStatuses() { const selected = new Set(orderFilters.value.status); orderFilters.value.status = orderStatusMachine.filter(status => !selected.has(status)) }
-function orderRowClassName({ row }) { return row.status === '异常' ? 'order-row-exception' : '' }
+function selectAllOrderStatuses() { orderFilters.value.status = [...new Set(orderStatusMachine)] }
+function invertOrderStatuses() { const selected = new Set(orderFilters.value.status); orderFilters.value.status = [...new Set(orderStatusMachine.filter(status => !selected.has(status)))] }
+function orderRowClassName({ row }) { return row.status === '被拒绝' ? 'order-row-exception' : '' }
 function orderStatusVisual(status) {
-  if (status === '已撤') return { tone: 'draft', path: 'M4 4l8 8M12 4 4 12' }
-  if (status === '暂停') return { tone: 'pending', path: 'M5.5 4v8M10.5 4v8' }
-  if (status === '完成') return { tone: 'success', path: 'm3.5 8 2.8 2.8L12.5 5' }
-  if (status === '部成') return { tone: 'partial', path: 'M8 3a5 5 0 1 0 5 5H8z' }
+  if (['部撤', '撤单'].includes(status)) return { tone: 'draft', path: 'M4 4l8 8M12 4 4 12' }
+  if (status === '全成') return { tone: 'success', path: 'm3.5 8 2.8 2.8L12.5 5' }
+  if (status.includes('部成')) return { tone: 'partial', path: 'M8 3a5 5 0 1 0 5 5H8z' }
   if (status === '已报') return { tone: 'reported', path: 'M8 12V4M5 7l3-3 3 3M4 12v1h8v-1' }
-  if (status === '待报') return { tone: 'pending', path: 'M8 3a5 5 0 1 1 0 10A5 5 0 0 1 8 3m0 2.5V8l2 1.5' }
-  if (status === '改单中') return { tone: 'review', path: 'm4 12 1.2-3.3L10.8 3l2.2 2.2-5.7 5.7L4 12Zm5.3-8 2.2 2.2' }
-  if (status === '异常') return { tone: 'rejected', path: 'M8 3l5 9H3L8 3Zm0 3.1v2.7m0 1.8v.1' }
-  if (status === '拒绝') return { tone: 'rejected', path: 'M8 3a5 5 0 1 1 0 10A5 5 0 0 1 8 3Zm-2 3 4 4m0-4-4 4' }
+  if (['未报', '待报', '待撤', '待确认', '待确认［待审核］'].includes(status)) return { tone: 'pending', path: 'M8 3a5 5 0 1 1 0 10A5 5 0 0 1 8 3m0 2.5V8l2 1.5' }
+  if (status === '审核拒绝' || status === '被拒绝') return { tone: 'rejected', path: 'M8 3a5 5 0 1 1 0 10A5 5 0 0 1 8 3Zm-2 3 4 4m0-4-4 4' }
+  if (status.includes('待改') || status.includes('审核') || status === '已报待改') return { tone: 'review', path: 'm4 12 1.2-3.3L10.8 3l2.2 2.2-5.7 5.7L4 12Zm5.3-8 2.2 2.2' }
   return { tone: 'draft', path: 'M4 4.5h3v3H4v-3Zm5 0h3v3H9v-3ZM4 9h3v3H4V9Zm5 0h3v3H9V9Z' }
 }
 function updateGlobalAccountSelection(ids) {
@@ -685,10 +713,10 @@ function recordHtDealInEquity({ order, deal, quantity }) {
   }
   syncedHtPositions.value = [position, ...syncedHtPositions.value.filter(item => item.id !== id)]
   demoOrders.value = [enrichOrder({
-    id, orderNo: `HT-${order.orderNo}`, tradeNo: deal.dealNo, account, code, name: order.underlying, executionType: 'highTouch', algorithm: 'DMA',
+    id, orderNo: `HT-${order.orderNo}`, tradeNo: deal.dealNo, account, code, name: order.underlying, executionType: 'highTouch', algorithm: 'DMA', source: channelSources.customer,
     type: 'limit', side: order.direction === '卖出' ? 'sell' : 'buy', openClose: order.attribute === '平仓' ? '平' : '开', price: customerPrice,
     quantity: filledQuantity, inputAmount: order.orderValueMode === 'amount' ? numericValue(order.amountValue ?? order.amount) : null, estimate: value,
-    status: '完成', attribute: `限价·${order.orderValueMode === 'amount' ? '金额' : '数量'}`,
+    status: '全成', attribute: `限价·${order.orderValueMode === 'amount' ? '金额' : '数量'}`,
     orderValueNumber: order.orderValueMode === 'amount' ? numericValue(order.amountValue ?? order.amount) : filledQuantity,
     orderValue: order.orderValueMode === 'amount' ? `${money(numericValue(order.amountValue ?? order.amount))} CNY` : `${number(filledQuantity)} 股`,
     filledQuantity, filledPrice: customerPrice, feedback: `HT 订单 ${order.orderNo} 成交已同步。`, orderTime: timestampNow(),
@@ -737,11 +765,11 @@ function acceptChaseOrder(order) {
 function openOrderHistory(row) { historyRecord.value = row; historyVisible.value = true }
 function cancelableQuantity(row) { return Math.max(0, row.quantity - (row.filledQuantity || 0)) }
 function canOperateOrder(row) { return systemRunning.value && cancelableQuantity(row) > 0 && ['待报', '已报', '部成'].includes(row.status) }
-const terminalOrderStatuses = new Set(['已撤', '完成', '异常', '拒绝', '其他'])
+const terminalOrderStatuses = new Set(['部撤', '撤单', '全成', '被拒绝', '审核拒绝'])
 function isTerminalOrder(row) { return terminalOrderStatuses.has(row.status) }
 function canChaseOrder(row) { return systemRunning.value && (isTerminalOrder(row) || canOperateOrder(row)) }
 function canAmendOrder(row) { return !isTerminalOrder(row) && canOperateOrder(row) }
-function canConvertToManual(row) { return systemRunning.value && row.status === '异常' && row.orderType === '系统单' }
+function canConvertToManual(row) { return systemRunning.value && row.status === '被拒绝' && row.orderType === '系统单' }
 function orderActionLabel(row, action) {
   if (!systemRunning.value) return '系统已暂停交易'
   if (action === '追加订单' && isTerminalOrder(row)) return '基于原订单信息再次下单'
@@ -768,12 +796,12 @@ function confirmConvertToManual() {
   row.orderType = '手工单'
   row.orderRemark = conversionRemark.value.trim()
   row.convertedToManualAt = timestampNow()
-  row.feedback = `${row.feedback || '系统处理异常'}；已转为手工单，待交易员处理`
+  row.feedback = `${row.feedback || '系统拒绝'}；已转为手工单，待交易员处理`
   publishOrderActivityMessage(row)
   publishTransactionMessage({
     name: row.name, code: row.code, status: '已转为手工单', quantity: row.quantity,
     quantityLabel: '订单数量', price: row.price, priceLabel: '订单价格', title: '订单已转手工单',
-    content: `${row.name}（${row.code}）异常系统单已转为手工单，订单编号 ${row.orderNo} 保持不变。`,
+    content: `${row.name}（${row.code}）被拒绝系统单已转为手工单，订单编号 ${row.orderNo} 保持不变。`,
   })
   ElMessage.success('订单已转为手工单。')
   convertManualVisible.value = false
@@ -803,7 +831,7 @@ function acceptAmendOrder(amendment) {
     row.canceledAmount = (row.canceledAmount || 0) + outstanding * (row.price ?? amendingSymbol.value?.price ?? 0)
     row.reportQuantity = 0
     row.frozenMargin = 0
-    row.status = '已撤'
+    row.status = '部撤'
     row.feedback = replacementOrderNo
       ? `未成交部分已撤，关联改单订单 ${replacementOrderNo}`
       : '未成交部分已撤，已成交记录保持不变'
@@ -854,7 +882,7 @@ function acceptAmendOrder(amendment) {
   row.orderValue = row.inputAmount === null ? `${number(amendedBaseQuantity)} 股` : `${money(row.inputAmount)} CNY`
   row.estimate = referencePrice * amendedBaseQuantity
   row.frozenMargin = row.estimate * .4
-  row.status = '改单中'
+  row.status = '已报待改'
   if (delta > 0) {
     const id = Date.now()
     const chaseAmount = amendment.inputAmount === null ? null : delta * referencePrice
@@ -924,7 +952,7 @@ function confirmCancelOrder() {
 function cancelInstruction(row, notify) {
   if (!canOperateOrder(row)) return false
   row.canceledQuantity = cancelableQuantity(row)
-  row.status = '已撤'
+  row.status = row.filledQuantity > 0 ? '部撤' : '撤单'
   row.reportQuantity = 0
   row.frozenMargin = 0
   row.feedback = '撤单成功'
