@@ -1,7 +1,8 @@
 <script setup>
-import { inject, ref } from 'vue'
+import { computed, inject, onBeforeUnmount, reactive, ref, watch } from 'vue'
 import { tradingContextKey } from '../tradingContext'
 import { ArrowDownBold, Search, View, Hide, Close } from '@element-plus/icons-vue'
+import { ElMessage } from 'element-plus'
 import { accounts, brokerAccounts } from '../fixtures'
 import { marketInstruments, variants, money, number, price as formatPrice } from '../variantData'
 import BaseDialog from '../../../components/BaseDialog.vue'
@@ -16,7 +17,199 @@ import OrdersTable from '../components/OrdersTable.vue'
 import TradesTable from '../components/TradesTable.vue'
 import InstructionTable from '../components/InstructionTable.vue'
 const instructionDetailHeight = ref(null)
-const { assetUrl, variant, systemRunning, transactionToasts, messageIcon, allAccountsValue, workspace, selectedAccountIds, market, globalAccountSearch, assetsVisible, assetsCollapsed, tab, selectedCode, quote, ticketResetKey, ticketContext, closePositionVisible, closingPosition, chaseOrderVisible, chasingPosition, chasingOrder, amendOrderVisible, amendingOrder, cancelOrderVisible, cancelingOrder, bulkCancelVisible, bulkCancelIds, instructionTable, convertManualVisible, convertingManualOrder, conversionRemark, historyVisible, historyRecord, demoOrders, dock, collapsed, dragging, resizing, floating, start, startResize, isTicketLayoutModified, account, closingAccount, chasingAccount, amendingAccount, amendingSymbol, effectiveAccountIds, filteredGlobalAccounts, instruments, selected, allRows, assetSummaryMetrics, orders, trades, floatStyle, resetTicketLayout, toggleSystemStatus, dismissTransactionToast, accountLabel, marketLabel, tradeStatusLabel, tradeStatusVisual, toggleAssetsVisible, updateGlobalAccountSelection, handleGlobalAccountVisible, selectTicketAccount, assetAmountParts, acceptOrder, acceptClosePosition, acceptChaseOrder, cancelableQuantity, canOperateOrder, canChaseOrder, canAmendOrder, canConvertToManual, orderActionLabel, openOrderChase, openCancelOrder, openBulkCancel, openConvertToManual, confirmConvertToManual, openAmendOrder, acceptAmendOrder, confirmCancelOrder, confirmBulkCancel } = inject(tradingContextKey)
+const { assetUrl, variant, systemRunning, transactionToasts, messageIcon, allAccountsValue, workspace, selectedAccountIds, market, globalAccountSearch, assetsVisible, assetsCollapsed, tab, selectedCode, quote, ticketResetKey, ticketContext, closePositionVisible, closingPosition, chaseOrderVisible, chasingPosition, chasingOrder, amendOrderVisible, amendingOrder, cancelOrderVisible, cancelingOrder, bulkCancelVisible, bulkCancelIds, instructionTable, convertManualVisible, convertingManualOrder, conversionRemark, historyVisible, historyRecord, demoOrders, dock, collapsed, dragging, resizing, floating, start, startResize, isTicketLayoutModified, account, closingAccount, chasingAccount, amendingAccount, amendingSymbol, effectiveAccountIds, filteredGlobalAccounts, instruments, selected, allRows, assetSummaryMetrics, orders, trades, positionRowsForAccounts, ordersForAccounts, tradesForAccounts, floatStyle, resetTicketLayout, toggleSystemStatus, dismissTransactionToast, accountLabel, marketLabel, tradeStatusLabel, tradeStatusVisual, toggleAssetsVisible, updateGlobalAccountSelection, handleGlobalAccountVisible, selectTicketAccount, assetAmountParts, acceptOrder, acceptClosePosition, acceptChaseOrder, cancelableQuantity, canOperateOrder, canChaseOrder, canAmendOrder, canConvertToManual, orderActionLabel, openOrderChase, openCancelOrder, openBulkCancel, openConvertToManual, confirmConvertToManual, openAmendOrder, acceptAmendOrder, confirmCancelOrder, confirmBulkCancel } = inject(tradingContextKey)
+
+const tabIds = ['positions', 'instructions', 'orders', 'trades']
+const tabLabels = { positions: '所有持仓', instructions: '所有指令', orders: '所有订单', trades: '所有成交' }
+const accountInstructions = computed(() => demoOrders.value.filter(order => effectiveAccountIds.value.includes(order.account)))
+const detachedTabs = reactive({})
+function detachedAccountIds(id) {
+  const ids = detachedTabs[id]?.accountIds || []
+  return ids.includes(allAccountsValue) ? accounts.map(item => item.id) : ids
+}
+const tabCounts = computed(() => ({
+  positions: detachedTabs.positions ? positionRowsForAccounts(detachedAccountIds('positions')).allRows.length : allRows.value.length,
+  instructions: detachedTabs.instructions ? demoOrders.value.filter(order => detachedAccountIds('instructions').includes(order.account)).length : accountInstructions.value.length,
+  orders: detachedTabs.orders ? ordersForAccounts(detachedAccountIds('orders')).length : orders.value.length,
+  trades: detachedTabs.trades ? tradesForAccounts(detachedAccountIds('trades')).length : trades.value.length,
+}))
+const tabDragPreview = ref(null)
+const restoreDropTarget = ref(null)
+let topWindowLevel = 60
+let stopPointerTracking = null
+let suppressTabClick = null
+
+function firstDockedTab() {
+  return tabIds.find(id => !detachedTabs[id]) || null
+}
+
+function tabBarClearance() {
+  return (workspace.value?.querySelector('.positions-tabs')?.offsetHeight || 36) + 8
+}
+
+function isOverTabBar(clientX, clientY) {
+  const bounds = workspace.value?.querySelector('.positions-tabs')?.getBoundingClientRect()
+  return !!bounds && clientX >= bounds.left && clientX <= bounds.right && clientY >= bounds.top && clientY <= bounds.bottom
+}
+
+function bringTabForward(id) {
+  if (detachedTabs[id]) detachedTabs[id].zIndex = ++topWindowLevel
+}
+
+function selectTab(id) {
+  if (suppressTabClick === id) {
+    suppressTabClick = null
+    return
+  }
+  if (detachedTabs[id]) bringTabForward(id)
+  else tab.value = id
+}
+
+function detachTab(id, clientX, clientY) {
+  if (detachedTabs[id] || !workspace.value) return
+  if (tabIds.filter(item => !detachedTabs[item]).length <= 1) {
+    ElMessage.warning('至少保留一个标签在主区域')
+    return
+  }
+  const bounds = workspace.value.getBoundingClientRect()
+  const minY = tabBarClearance()
+  const width = Math.min(680, Math.max(300, bounds.width - 20))
+  const height = Math.min(480, Math.max(240, bounds.height - minY - 8))
+  detachedTabs[id] = {
+    x: Math.max(0, Math.min(clientX - bounds.left - 24, bounds.width - width)),
+    y: Math.max(minY, Math.min(clientY - bounds.top - 18, bounds.height - height)),
+    width,
+    height,
+    zIndex: ++topWindowLevel,
+    accountIds: [...selectedAccountIds.value],
+    previousAccountIds: [...selectedAccountIds.value],
+    accountSearch: '',
+  }
+  if (tab.value === id) tab.value = firstDockedTab()
+}
+
+function restoreTab(id) {
+  delete detachedTabs[id]
+  tab.value = id
+}
+
+function updateDetachedAccountSelection(id, ids) {
+  const floatingTab = detachedTabs[id]
+  const hadAll = floatingTab.previousAccountIds.includes(allAccountsValue)
+  const hasAll = ids.includes(allAccountsValue)
+  if (!ids.length || (hasAll && !hadAll)) floatingTab.accountIds = [allAccountsValue]
+  else if (hasAll && hadAll && ids.length > 1) floatingTab.accountIds = ids.filter(value => value !== allAccountsValue)
+  floatingTab.previousAccountIds = [...floatingTab.accountIds]
+}
+
+function filteredDetachedAccounts(id) {
+  const keyword = detachedTabs[id].accountSearch.trim().toLowerCase()
+  return keyword ? accounts.filter(item => accountLabel(item.id).toLowerCase().includes(keyword)) : accounts
+}
+
+function setInstructionTableInstance(instance) {
+  instructionTable.value = instance
+}
+
+function trackPointer(event, onMove, onEnd) {
+  stopPointerTracking?.()
+  const pointerId = event.pointerId
+  const move = next => { if (next.pointerId === pointerId) onMove(next) }
+  const finish = next => {
+    if (next.pointerId !== pointerId) return
+    stopPointerTracking?.()
+    onEnd(next)
+  }
+  window.addEventListener('pointermove', move)
+  window.addEventListener('pointerup', finish)
+  window.addEventListener('pointercancel', finish)
+  stopPointerTracking = () => {
+    window.removeEventListener('pointermove', move)
+    window.removeEventListener('pointerup', finish)
+    window.removeEventListener('pointercancel', finish)
+    stopPointerTracking = null
+  }
+}
+
+function beginTabDrag(id, event) {
+  if (event.button !== 0 || detachedTabs[id]) return
+  const startX = event.clientX
+  const startY = event.clientY
+  if (tabIds.filter(item => !detachedTabs[item]).length <= 1) {
+    let warned = false
+    trackPointer(event, next => {
+      if (!warned && Math.hypot(next.clientX - startX, next.clientY - startY) >= 10) {
+        warned = true
+        ElMessage.warning('至少保留一个标签在主区域')
+      }
+    }, () => {})
+    return
+  }
+  const header = event.currentTarget.parentElement
+  let moved = false
+  trackPointer(event, next => {
+    if (!moved && Math.hypot(next.clientX - startX, next.clientY - startY) < 10) return
+    moved = true
+    suppressTabClick = id
+    tabDragPreview.value = { label: tabLabels[id], x: next.clientX + 12, y: next.clientY + 12 }
+  }, next => {
+    tabDragPreview.value = null
+    if (!moved) return
+    setTimeout(() => { if (suppressTabClick === id) suppressTabClick = null }, 0)
+    if (next.type === 'pointercancel') return
+    const bounds = header.getBoundingClientRect()
+    if (next.clientX < bounds.left || next.clientX > bounds.right || next.clientY < bounds.top || next.clientY > bounds.bottom) {
+      detachTab(id, next.clientX, next.clientY)
+    }
+  })
+}
+
+function beginWindowDrag(id, event) {
+  if (event.button !== 0 || event.target.closest('button')) return
+  event.preventDefault()
+  bringTabForward(id)
+  restoreDropTarget.value = null
+  const floatingTab = detachedTabs[id]
+  const startX = event.clientX
+  const startY = event.clientY
+  const x = floatingTab.x
+  const y = floatingTab.y
+  trackPointer(event, next => {
+    const bounds = workspace.value.getBoundingClientRect()
+    floatingTab.x = Math.max(0, Math.min(x + next.clientX - startX, bounds.width - floatingTab.width))
+    floatingTab.y = Math.max(tabBarClearance(), Math.min(y + next.clientY - startY, bounds.height - floatingTab.height))
+    restoreDropTarget.value = isOverTabBar(next.clientX, next.clientY) ? id : null
+  }, next => {
+    const shouldRestore = next.type === 'pointerup' && isOverTabBar(next.clientX, next.clientY)
+    restoreDropTarget.value = null
+    if (shouldRestore) restoreTab(id)
+  })
+}
+
+function beginWindowResize(id, event) {
+  if (event.button !== 0) return
+  event.preventDefault()
+  event.stopPropagation()
+  bringTabForward(id)
+  const floatingTab = detachedTabs[id]
+  const startX = event.clientX
+  const startY = event.clientY
+  const width = floatingTab.width
+  const height = floatingTab.height
+  trackPointer(event, next => {
+    const bounds = workspace.value.getBoundingClientRect()
+    floatingTab.width = Math.max(300, Math.min(width + next.clientX - startX, bounds.width - floatingTab.x))
+    floatingTab.height = Math.max(240, Math.min(height + next.clientY - startY, bounds.height - floatingTab.y))
+  }, () => {})
+}
+
+watch(tab, (id, previous) => {
+  if (id && detachedTabs[id]) {
+    bringTabForward(id)
+    tab.value = previous && !detachedTabs[previous] ? previous : firstDockedTab()
+  }
+})
+onBeforeUnmount(() => stopPointerTracking?.())
 </script>
 
 <template>
@@ -31,13 +224,14 @@ const { assetUrl, variant, systemRunning, transactionToasts, messageIcon, allAcc
     </aside>
     <div ref="workspace" class="variants-workspace" :class="[`dock-${dock}`,{'ticket-collapsed':collapsed,'is-dragging':dragging}]">
       <section class="positions-pane workspace-panel">
-        <header class="positions-tabs"><button :class="{active:tab==='positions'}" @click="tab='positions'">所有持仓<span>({{ allRows.length }})</span></button><button :class="{active:tab==='instructions'}" @click="tab='instructions'">所有指令<span>({{ demoOrders.filter(o => effectiveAccountIds.includes(o.account)).length }})</span></button><button :class="{active:tab==='orders'}" @click="tab='orders'">所有订单<span>({{ orders.length }})</span></button><button :class="{active:tab==='trades'}" @click="tab='trades'">所有成交<span>({{ trades.length }})</span></button><el-select v-model="selectedAccountIds" class="global-account-filter" multiple collapse-tags :max-collapse-tags="1" placeholder="下单账户" aria-label="全局下单账户筛选" popper-class="variant-popper global-account-popper" :offset="2" @visible-change="handleGlobalAccountVisible" @change="updateGlobalAccountSelection"><template #header><div class="account-dropdown-search" @click.stop><el-input v-model="globalAccountSearch" :prefix-icon="Search" placeholder="搜索下单账户" clearable /></div></template><el-option label="全部账户" :value="allAccountsValue" /><el-option v-for="option in filteredGlobalAccounts" :key="option.id" :label="accountLabel(option.id)" :value="option.id" /></el-select><button v-if="collapsed" class="workspace-restore-ticket" @click="collapsed=false"><img class="restore-panel-icon" :src="assetUrl('panel-expand.svg')" alt=""><span class="restore-panel-label">展开下单面板</span></button></header>
+        <header class="positions-tabs" :class="{ 'is-restore-target': restoreDropTarget }"><button v-if="!detachedTabs.positions" :class="{active:tab==='positions'}" title="拖出标签可悬浮，双击可悬浮" @pointerdown="beginTabDrag('positions', $event)" @dblclick="detachTab('positions', $event.clientX, $event.clientY)" @click="selectTab('positions')">所有持仓<span>({{ tabCounts.positions }})</span></button><button v-if="!detachedTabs.instructions" :class="{active:tab==='instructions'}" title="拖出标签可悬浮，双击可悬浮" @pointerdown="beginTabDrag('instructions', $event)" @dblclick="detachTab('instructions', $event.clientX, $event.clientY)" @click="selectTab('instructions')">所有指令<span>({{ tabCounts.instructions }})</span></button><button v-if="!detachedTabs.orders" :class="{active:tab==='orders'}" title="拖出标签可悬浮，双击可悬浮" @pointerdown="beginTabDrag('orders', $event)" @dblclick="detachTab('orders', $event.clientX, $event.clientY)" @click="selectTab('orders')">所有订单<span>({{ tabCounts.orders }})</span></button><button v-if="!detachedTabs.trades" :class="{active:tab==='trades'}" title="拖出标签可悬浮，双击可悬浮" @pointerdown="beginTabDrag('trades', $event)" @dblclick="detachTab('trades', $event.clientX, $event.clientY)" @click="selectTab('trades')">所有成交<span>({{ tabCounts.trades }})</span></button><el-select v-model="selectedAccountIds" class="global-account-filter" multiple collapse-tags :max-collapse-tags="1" placeholder="下单账户" aria-label="全局下单账户筛选" popper-class="variant-popper global-account-popper" :offset="2" @visible-change="handleGlobalAccountVisible" @change="updateGlobalAccountSelection"><template #header><div class="account-dropdown-search" @click.stop><el-input v-model="globalAccountSearch" :prefix-icon="Search" placeholder="搜索下单账户" clearable /></div></template><el-option label="全部账户" :value="allAccountsValue" /><el-option v-for="option in filteredGlobalAccounts" :key="option.id" :label="accountLabel(option.id)" :value="option.id" /></el-select><button v-if="collapsed" class="workspace-restore-ticket" @click="collapsed=false"><img class="restore-panel-icon" :src="assetUrl('panel-expand.svg')" alt=""><span class="restore-panel-label">展开下单面板</span></button><span v-if="restoreDropTarget" class="tab-restore-cue">松开还原{{ tabLabels[restoreDropTarget] }}</span></header>
         <template v-if="tab==='instructions'">
-          <InstructionTable ref="instructionTable" v-model:detail-height="instructionDetailHeight" :orders="demoOrders.filter(o => effectiveAccountIds.includes(o.account))" :accounts="accounts" :can-chase="canChaseOrder" :can-amend="canAmendOrder" :can-cancel="canOperateOrder" :action-label="orderActionLabel" @chase="openOrderChase" @amend="openAmendOrder" @cancel="openCancelOrder" @bulk-cancel="openBulkCancel" />
+          <InstructionTable :ref="setInstructionTableInstance" v-model:detail-height="instructionDetailHeight" :orders="accountInstructions" :accounts="accounts" :can-chase="canChaseOrder" :can-amend="canAmendOrder" :can-cancel="canOperateOrder" :action-label="orderActionLabel" @chase="openOrderChase" @amend="openAmendOrder" @cancel="openCancelOrder" @bulk-cancel="openBulkCancel" />
         </template>
         <PositionsTable v-else-if="tab==='positions'" />
         <OrdersTable v-else-if="tab==='orders'" />
-        <TradesTable v-else />
+        <TradesTable v-else-if="tab==='trades'" />
+        <div v-else class="detached-empty">表格已悬浮，可从窗口右上角还原</div>
       </section>
       <section class="trade-dock" :class="{floating:dock==='floating', resizing, 'assets-collapsed':assetsCollapsed}" :style="floatStyle">
         <OrderBook v-show="!collapsed" :symbol="selected" :compact="dock === 'bottom'" @drag="start" @quote="value=>{quote=value;collapsed=false}" />
@@ -58,6 +252,15 @@ const { assetUrl, variant, systemRunning, transactionToasts, messageIcon, allAcc
         <button v-if="dock === 'floating'" type="button" class="floating-resize-handle" aria-label="调整下单面板高度" @pointerdown="startResize"><span></span></button>
       </section>
       <div v-if="dragging" class="dock-targets"><div class="dock-target target-left">停靠左侧</div><div class="dock-target target-right">停靠右侧</div><div class="dock-target target-bottom">停靠底部</div><span class="float-instruction">拖至边缘停靠 · 放在中间悬浮</span></div>
+      <section v-for="id in tabIds.filter(item => detachedTabs[item])" :key="id" class="positions-pane workspace-panel detached-tab-window" :style="{ left:`${detachedTabs[id].x}px`, top:`${detachedTabs[id].y}px`, width:`${detachedTabs[id].width}px`, height:`${detachedTabs[id].height}px`, zIndex:detachedTabs[id].zIndex }" @pointerdown="bringTabForward(id)">
+        <header class="detached-tab-header" @pointerdown="beginWindowDrag(id, $event)"><strong>{{ tabLabels[id] }}<span class="detached-tab-count">({{ tabCounts[id] }})</span></strong><el-select v-model="detachedTabs[id].accountIds" class="global-account-filter detached-account-filter" multiple collapse-tags :max-collapse-tags="1" placeholder="下单账户" :aria-label="`${tabLabels[id]}下单账户筛选`" popper-class="variant-popper global-account-popper" :offset="2" @pointerdown.stop @visible-change="visible => { if (!visible) detachedTabs[id].accountSearch = '' }" @change="ids => updateDetachedAccountSelection(id, ids)"><template #header><div class="account-dropdown-search" @click.stop><el-input v-model="detachedTabs[id].accountSearch" :prefix-icon="Search" placeholder="搜索下单账户" clearable /></div></template><el-option label="全部账户" :value="allAccountsValue" /><el-option v-for="option in filteredDetachedAccounts(id)" :key="option.id" :label="accountLabel(option.id)" :value="option.id" /></el-select><button type="button" :aria-label="`还原${tabLabels[id]}标签`" @pointerdown.stop @click="restoreTab(id)">还原</button></header>
+        <InstructionTable v-if="id==='instructions'" :ref="setInstructionTableInstance" v-model:detail-height="instructionDetailHeight" :orders="demoOrders.filter(order => detachedAccountIds(id).includes(order.account))" :accounts="accounts" :can-chase="canChaseOrder" :can-amend="canAmendOrder" :can-cancel="canOperateOrder" :action-label="orderActionLabel" @chase="openOrderChase" @amend="openAmendOrder" @cancel="openCancelOrder" @bulk-cancel="openBulkCancel" />
+        <PositionsTable v-else-if="id==='positions'" :account-ids="detachedAccountIds(id)" />
+        <OrdersTable v-else-if="id==='orders'" :account-ids="detachedAccountIds(id)" />
+        <TradesTable v-else :account-ids="detachedAccountIds(id)" />
+        <button type="button" class="detached-tab-resize" :aria-label="`调整${tabLabels[id]}窗口大小`" @pointerdown="beginWindowResize(id, $event)"></button>
+      </section>
+      <div v-if="tabDragPreview" class="tab-drag-preview" :style="{ left:`${tabDragPreview.x}px`, top:`${tabDragPreview.y}px` }">{{ tabDragPreview.label }} · 松开以悬浮</div>
     </div>
     <footer class="variant-status"><span class="system-status"><i class="status-dot" :class="{ 'is-interrupted': !systemRunning }"/>{{ systemRunning ? '运行中' : '系统中断' }} · 演示环境<button type="button" class="system-status-toggle" @click="toggleSystemStatus">{{ systemRunning ? '切换为中断' : '恢复运行' }}</button></span><span>行情：静态快照</span><span class="status-end">系统版本：方案 V0.2</span></footer>
     <ClosePositionDialog v-model="closePositionVisible" :position="closingPosition" :account="closingAccount" :broker-accounts="brokerAccounts" :paused="!systemRunning" @submit="acceptClosePosition" />
@@ -117,4 +320,18 @@ const { assetUrl, variant, systemRunning, transactionToasts, messageIcon, allAcc
 
 <style>
 .variants-app .order-cancel-dialog .order-cancel-details>div{grid-template-columns:112px minmax(0,1fr)}
+.variants-app .positions-tabs>button{touch-action:none;user-select:none}
+.variants-app .positions-tabs.is-restore-target{position:relative;box-shadow:inset 0 0 0 1px #bb984a}
+.variants-app .tab-restore-cue{position:absolute;top:50%;left:12px;z-index:1;transform:translateY(-50%);padding:4px 8px;border-radius:2px;background:#302c24;color:#e1c36f;pointer-events:none}
+.variants-app .detached-empty{flex:1;display:grid;place-items:center;color:#818995;font-size:12px}
+.variants-app .detached-tab-window{grid-area:auto;position:absolute;border-color:#786846;box-shadow:0 14px 42px #000a}
+.variants-app .detached-tab-header{height:36px;flex:0 0 36px;display:flex;align-items:center;gap:10px;padding:0 10px;border-bottom:1px solid #303338;background:#25282d;cursor:grab;touch-action:none;user-select:none}
+.variants-app .detached-tab-header:active{cursor:grabbing}
+.variants-app .detached-tab-header strong{font-size:12px;font-weight:600}
+.variants-app .detached-tab-count{margin-left:3px;color:#bb984a}
+.variants-app .detached-account-filter{width:148px;min-width:86px;flex:0 1 148px;margin-left:auto}
+.variants-app .detached-tab-header button{height:23px;padding:0 8px;border:1px solid #786846;border-radius:3px;background:#353026;color:#d6b877;cursor:pointer}
+.variants-app .detached-tab-header button:hover{background:#433927}
+.variants-app .detached-tab-resize{position:absolute;right:0;bottom:0;z-index:2;width:17px;height:17px;padding:0;border:0;background:linear-gradient(135deg,transparent 62%,#8f7947 63%,#8f7947 69%,transparent 70%);cursor:nwse-resize;touch-action:none}
+.variants-app .tab-drag-preview{position:fixed;z-index:79;padding:6px 10px;border:1px solid #bb984a;border-radius:3px;background:#302c24;color:#e1c36f;box-shadow:0 8px 24px #0008;pointer-events:none;white-space:nowrap}
 </style>

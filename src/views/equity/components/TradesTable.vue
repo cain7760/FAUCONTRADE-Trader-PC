@@ -1,5 +1,5 @@
 <script setup>
-import { inject } from 'vue'
+import { computed, inject } from 'vue'
 import { tradingContextKey } from '../tradingContext'
 import { Search, Refresh, InfoFilled } from '@element-plus/icons-vue'
 import { money, price as formatPrice } from '../variantData'
@@ -7,7 +7,9 @@ import { currencyFor, orderActivity, orderActivityHint, sharesWithUnit } from '.
 import SortHeader from './SortHeader.vue'
 import ColumnConfigPopover from './ColumnConfigPopover.vue'
 import TradingTable from './TradingTable.vue'
-const { variant, query, market, table, tableRefreshKey, tradeFilters, tradeColumnDefaults, tradeVisibleColumnKeys, tradeColumnOptions, tradeSortState, account, orders, sortedTrades, accountLabel, marketLabel, timeLabel, toggleTradeSort, applyTradeFilters, clearTradeFilters, confirmExport, refreshTable, openOrderHistory } = inject(tradingContextKey)
+const props = defineProps({ accountIds: { type: Array, default: null } })
+const { variant, query, market, table, tableRefreshKey, tradeFilters, tradeColumnDefaults, tradeVisibleColumnKeys, tradeColumnOptions, tradeSortState, account, orders, sortedTrades, tradesForAccounts, sortTradeRows, accountLabel, marketLabel, timeLabel, toggleTradeSort, applyTradeFilters, clearTradeFilters, confirmExport, refreshTable, openOrderHistory } = inject(tradingContextKey)
+const displayedTrades = computed(() => props.accountIds ? sortTradeRows(tradesForAccounts(props.accountIds)) : sortedTrades.value)
 </script>
 
 <template>
@@ -17,9 +19,9 @@ const { variant, query, market, table, tableRefreshKey, tradeFilters, tradeColum
             <el-select v-model="tradeFilters.openClose" aria-label="开平类型筛选" popper-class="variant-popper" :offset="2"><el-option label="开平类型" value="ALL"/><el-option label="开仓" value="开"/><el-option label="平仓" value="平"/></el-select>
             <el-select v-model="tradeFilters.orderType" aria-label="订单类型筛选" popper-class="variant-popper" :offset="2"><el-option label="订单类型" value="ALL"/><el-option label="系统单" value="系统单"/><el-option label="手工单" value="手工单"/></el-select>
             <el-button class="filter-query" @click="applyTradeFilters">查询</el-button><el-button link @click="clearTradeFilters">重置</el-button>
-            <div class="table-toolbar-actions"><el-tooltip content="刷新当前表格" placement="top"><button class="refresh-table" aria-label="刷新成交记录" @click="refreshTable"><el-icon><Refresh /></el-icon></button></el-tooltip><button class="export-orders" aria-label="导出成交记录" title="导出当前成交表格数据" @click="confirmExport('trades')"><el-icon><svg class="export-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15V3m0 0L7.5 7.5M12 3l4.5 4.5M4 11v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/></svg></el-icon></button></div>
+            <div class="table-toolbar-actions"><el-tooltip content="刷新当前表格" placement="top"><button class="refresh-table" aria-label="刷新成交记录" @click="refreshTable"><el-icon><Refresh /></el-icon></button></el-tooltip><button class="export-orders" aria-label="导出成交记录" title="导出当前成交表格数据" @click="confirmExport('trades', [], props.accountIds)"><el-icon><svg class="export-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15V3m0 0L7.5 7.5M12 3l4.5 4.5M4 11v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/></svg></el-icon></button></div>
           </div>
-          <TradingTable :key="`trades-${tableRefreshKey}`" class="original-fields orders-table trades-table" :data="sortedTrades" height="100%" :fit="false" empty-text="暂无成交记录" copyable-identifiers>
+          <TradingTable :key="`trades-${tableRefreshKey}`" class="original-fields orders-table trades-table" :data="displayedTrades" height="100%" :fit="false" empty-text="暂无成交记录" copyable-identifiers>
             <el-table-column type="index" label="序号" width="44" align="center" header-align="center" class-name="order-index-column" label-class-name="order-index-column" />
             <template v-for="columnKey in tradeVisibleColumnKeys" :key="columnKey">
               <el-table-column v-if="columnKey === 'side'" prop="side" label="方向" width="64" align="left" header-align="left"><template #default="{row}"><span :class="row.side === 'buy' ? 'up' : 'down'">{{ row.side === 'buy' ? '买入' : '卖出' }}</span></template></el-table-column>

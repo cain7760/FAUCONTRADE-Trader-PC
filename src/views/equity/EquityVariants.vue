@@ -216,19 +216,34 @@ const filteredGlobalAccounts = computed(() => {
   const keyword = globalAccountSearch.value.trim().toLowerCase()
   return keyword ? accounts.filter(item => accountLabel(item.id).toLowerCase().includes(keyword)) : accounts
 })
-const instruments = computed(() => variantRows.map(p => accountId.value === 'TZS_T0' ? p : { ...p, id: p.id.replace('T0','T1'), qty: p.qty*2, available: p.available*2, value: p.value*2, account:'TZS_T1' }))
+function secondAccountPosition(position) {
+  return {
+    ...position, id: position.id.replace('T0', 'T1'), account: 'TZS_T1',
+    opening: position.opening * 2, qty: position.qty * 2, available: position.available * 2,
+    pendingSell: (position.pendingSell || 0) * 2,
+    todayExecutions: position.todayExecutions?.map(execution => ({ ...execution, quantity: execution.quantity * 2 })),
+    value: position.value * 2, valueWan: position.valueWan * 2, marginOccupied: position.marginOccupied * 2,
+    floatingProfit: position.floatingProfit * 2, dailyRealizedProfit: position.dailyRealizedProfit * 2, totalProfit: position.totalProfit * 2,
+  }
+}
+const instruments = computed(() => variantRows.map(p => accountId.value === 'TZS_T0' ? p : secondAccountPosition(p)))
 const emptySelected = { code: '', market: '', name: '请选择下单标的', price: null, cost: null, change: 0, available: 0 }
 const selected = computed(() => instruments.value.find(p => p.code === selectedCode.value) || marketInstruments.find(p => p.code === selectedCode.value) || emptySelected)
 const { traderPrimaryMenu, activeTraderPrimary, activeTraderSecondary, traderSecondaryCollapsed, activeTraderGroup, selectTraderPrimary, trsOrderTicketVisible, trsOrderRequest, trsTicketSymbol, trsTicketInstruments, openTrsOrderTicket, acceptTrsOrder } = useTraderCenterSession({ selected, acceptOrder })
 const allPositionRows = computed(() => {
   const baseRows = [
     ...variantRows.map(p => ({ ...p, brokerAccountId: brokerAccounts[0].id, brokerAccountLabel: brokerAccounts[0].name })),
-    ...variantRows.map(p => ({ ...p, id: p.id.replace('T0', 'T1'), qty: p.qty * 2, available: p.available * 2, value: p.value * 2, account: 'TZS_T1', brokerAccountId: brokerAccounts[1].id, brokerAccountLabel: brokerAccounts[1].name })),
+    ...variantRows.map(p => ({ ...secondAccountPosition(p), brokerAccountId: brokerAccounts[1].id, brokerAccountLabel: brokerAccounts[1].name })),
   ]
   const syncedKeys = new Set(syncedHtPositions.value.map(row => `${row.account}:${row.code}`))
   return [...syncedHtPositions.value, ...baseRows.filter(row => !syncedKeys.has(`${row.account}:${row.code}`))]
 })
 const allRows = computed(() => allPositionRows.value.filter(row => effectiveAccountIds.value.includes(row.account)))
+function positionRowsForAccounts(accountIds) {
+  const rows = allPositionRows.value.filter(row => accountIds.includes(row.account))
+  const matching = filterPositionRows(rows)
+  return { allRows: rows, filtered: matching, sortedRows: sortPositionRows(matching) }
+}
 const assetSummaryMetrics = computed(() => {
   let marketValueCny = 0
   let floatingProfitCny = 0
@@ -252,27 +267,31 @@ const assetSummaryMetrics = computed(() => {
     { key: 'floatingProfit', label: '浮动盈亏', value: floatingProfit, tone: floatingProfit > 0 ? 'is-profit' : floatingProfit < 0 ? 'is-loss' : '' },
   ]
 })
-const filtered = computed(() => allRows.value.filter(p => (!appliedPositionFilters.value.query || `${p.code}${p.name}`.includes(appliedPositionFilters.value.query.trim())) && (appliedPositionFilters.value.market === 'ALL' || p.market === appliedPositionFilters.value.market) && (appliedPositionFilters.value.positionType === 'ALL' || p.direction === appliedPositionFilters.value.positionType)))
-const sortedRows = computed(() => {
+function filterPositionRows(rows) { return rows.filter(p => (!appliedPositionFilters.value.query || `${p.code}${p.name}`.includes(appliedPositionFilters.value.query.trim())) && (appliedPositionFilters.value.market === 'ALL' || p.market === appliedPositionFilters.value.market) && (appliedPositionFilters.value.positionType === 'ALL' || p.direction === appliedPositionFilters.value.positionType)) }
+const filtered = computed(() => filterPositionRows(allRows.value))
+function sortPositionRows(rows) {
   const { prop, direction } = sortState.value
-  if (!prop || !direction) return filtered.value
+  if (!prop || !direction) return rows
   const multiplier = direction === 'ascending' ? 1 : -1
-  return [...filtered.value].sort((a, b) => {
+  return [...rows].sort((a, b) => {
     const left = a[prop], right = b[prop]
     if (typeof left === 'string') return left.localeCompare(right, 'zh-CN') * multiplier
     return (left - right) * multiplier
   })
-})
-const orders = computed(() => demoOrders.value.filter(o => effectiveAccountIds.value.includes(o.account) && (!appliedOrderFilters.value.orderNo || o.orderNo.includes(appliedOrderFilters.value.orderNo.trim())) && (!appliedOrderFilters.value.symbol || `${o.code}${o.name}`.includes(appliedOrderFilters.value.symbol.trim())) && (appliedOrderFilters.value.side === 'ALL' || o.side === appliedOrderFilters.value.side) && (appliedOrderFilters.value.openClose === 'ALL' || o.openClose === appliedOrderFilters.value.openClose) && (appliedOrderFilters.value.orderType === 'ALL' || o.orderType === appliedOrderFilters.value.orderType) && (!appliedOrderFilters.value.status.length || appliedOrderFilters.value.status.includes(o.status))))
-const sortedOrders = computed(() => {
+}
+const sortedRows = computed(() => sortPositionRows(filtered.value))
+function ordersForAccounts(accountIds) { return demoOrders.value.filter(o => accountIds.includes(o.account) && (!appliedOrderFilters.value.orderNo || o.orderNo.includes(appliedOrderFilters.value.orderNo.trim())) && (!appliedOrderFilters.value.symbol || `${o.code}${o.name}`.includes(appliedOrderFilters.value.symbol.trim())) && (appliedOrderFilters.value.side === 'ALL' || o.side === appliedOrderFilters.value.side) && (appliedOrderFilters.value.openClose === 'ALL' || o.openClose === appliedOrderFilters.value.openClose) && (appliedOrderFilters.value.orderType === 'ALL' || o.orderType === appliedOrderFilters.value.orderType) && (!appliedOrderFilters.value.status.length || appliedOrderFilters.value.status.includes(o.status))) }
+const orders = computed(() => ordersForAccounts(effectiveAccountIds.value))
+function sortOrderRows(rows) {
   const { prop, direction } = orderSortState.value
   const exceptionRank = row => row.status === '异常' ? (row.orderType === '系统单' ? 0 : 1) : 2
   const exceptionFirst = (a, b) => exceptionRank(a) - exceptionRank(b)
-  if (!prop || !direction) return [...orders.value].sort(exceptionFirst)
+  if (!prop || !direction) return [...rows].sort(exceptionFirst)
   const multiplier = direction === 'ascending' ? 1 : -1
-  return [...orders.value].sort((a, b) => exceptionFirst(a, b) || (orderSortValue(a, prop) - orderSortValue(b, prop)) * multiplier)
-})
-const trades = computed(() => demoOrders.value
+  return [...rows].sort((a, b) => exceptionFirst(a, b) || (orderSortValue(a, prop) - orderSortValue(b, prop)) * multiplier)
+}
+const sortedOrders = computed(() => sortOrderRows(orders.value))
+const allTradeRows = computed(() => demoOrders.value
   .map((order, index) => ({
     ...order,
     id: `${order.id}-trade`,
@@ -281,19 +300,21 @@ const trades = computed(() => demoOrders.value
     tradeNo: order.tradeNo || `CJ${order.orderNo.slice(2)}`,
     entrustNo: `${order.orderNo}-01`,
     tradeDate: order.orderTime.slice(0, 10).replaceAll('-', ''),
-  }))
-  .filter(trade => effectiveAccountIds.value.includes(trade.account)
+  })))
+function tradesForAccounts(accountIds) { return allTradeRows.value.filter(trade => accountIds.includes(trade.account)
     && trade.filledQuantity > 0 && trade.filledPrice !== null
     && (!appliedTradeFilters.value.symbol || `${trade.code}${trade.name}`.includes(appliedTradeFilters.value.symbol.trim()))
     && (appliedTradeFilters.value.side === 'ALL' || trade.side === appliedTradeFilters.value.side)
     && (appliedTradeFilters.value.openClose === 'ALL' || trade.openClose === appliedTradeFilters.value.openClose)
-    && (appliedTradeFilters.value.orderType === 'ALL' || trade.orderType === appliedTradeFilters.value.orderType)))
-const sortedTrades = computed(() => {
+    && (appliedTradeFilters.value.orderType === 'ALL' || trade.orderType === appliedTradeFilters.value.orderType)) }
+const trades = computed(() => tradesForAccounts(effectiveAccountIds.value))
+function sortTradeRows(rows) {
   const { prop, direction } = tradeSortState.value
-  if (!prop || !direction) return trades.value
+  if (!prop || !direction) return rows
   const multiplier = direction === 'ascending' ? 1 : -1
-  return [...trades.value].sort((left, right) => ((Number(left[prop]) || 0) - (Number(right[prop]) || 0)) * multiplier)
-})
+  return [...rows].sort((left, right) => ((Number(left[prop]) || 0) - (Number(right[prop]) || 0)) * multiplier)
+}
+const sortedTrades = computed(() => sortTradeRows(trades.value))
 const floatStyle = computed(() => dock.value === 'floating' ? { left: `${floating.value.x}px`, top: `${floating.value.y}px`, width:`${floating.value.width}px`, height:`${floating.value.height}px` } : {})
 function resetTicketLayout() {
   dock.value = defaultTicketDock.value
@@ -570,8 +591,12 @@ function exportRowDate(target, row) {
   if (target === 'trades') return row.filledTime
   return row.submittedAt
 }
-function exportRowsFor(target, dateRange = []) {
-  const rows = target === 'positions' ? sortedRows.value : target === 'orders' ? sortedOrders.value : target === 'trades' ? sortedTrades.value : trsPoolExportRows.value
+function exportRowsFor(target, dateRange = [], accountIds = null) {
+  let rows
+  if (target === 'positions') rows = accountIds ? positionRowsForAccounts(accountIds).sortedRows : sortedRows.value
+  else if (target === 'orders') rows = accountIds ? sortOrderRows(ordersForAccounts(accountIds)) : sortedOrders.value
+  else if (target === 'trades') rows = accountIds ? sortTradeRows(tradesForAccounts(accountIds)) : sortedTrades.value
+  else rows = trsPoolExportRows.value
   const [startDate, endDate] = dateRange
   if (!startDate || !endDate) return rows
   return rows.filter(row => {
@@ -579,8 +604,8 @@ function exportRowsFor(target, dateRange = []) {
     return date >= startDate && date <= endDate
   })
 }
-function confirmExport(target, dateRange = []) {
-  const rows = exportRowsFor(target, dateRange)
+function confirmExport(target, dateRange = [], accountIds = null) {
+  const rows = exportRowsFor(target, dateRange, accountIds)
   if (target === 'positions') exportPositions(rows)
   if (target === 'orders') exportOrders(rows)
   if (target === 'trades') exportTrades(rows)
@@ -944,6 +969,7 @@ provide(tradingContextKey, {
   historyVisible, historyRecord, demoOrders, dock, collapsed, dragging, resizing, floating,
   start, startResize, isTicketLayoutModified, account, closingAccount, chasingAccount, amendingAccount, amendingSymbol,
   effectiveAccountIds, filteredGlobalAccounts, instruments, selected, allRows, assetSummaryMetrics, orders, trades, sortedTrades, floatStyle,
+  positionRowsForAccounts, ordersForAccounts, tradesForAccounts, sortOrderRows, sortTradeRows,
   resetTicketLayout, toggleSystemStatus, dismissTransactionToast, accountLabel, marketLabel, tradeStatusLabel, tradeStatusVisual, toggleAssetsVisible,
   updateGlobalAccountSelection, handleGlobalAccountVisible, selectTicketAccount, assetAmountParts, acceptOrder, acceptClosePosition, acceptChaseOrder,
   cancelableQuantity, canOperateOrder, canChaseOrder, canAmendOrder, canConvertToManual, orderActionLabel, openOrderChase, openCancelOrder,
