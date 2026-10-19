@@ -1,6 +1,7 @@
 <script setup>
 import { ElMessage } from 'element-plus'
 import { ref } from 'vue'
+import ExceptionState from '../../../components/ExceptionState.vue'
 
 defineOptions({ inheritAttrs: false })
 const props = defineProps({ copyableIdentifiers: Boolean })
@@ -44,7 +45,7 @@ defineExpose({
 </script>
 
 <template>
-  <el-table ref="table" class="trading-table" v-bind="$attrs" :cell-class-name="identifierCellClass" @cell-dblclick="copyIdentifier"><slot /></el-table>
+  <el-table ref="table" class="trading-table" v-bind="$attrs" :cell-class-name="identifierCellClass" @cell-dblclick="copyIdentifier"><slot /><template #empty><slot name="empty"><ExceptionState type="empty" :description="$attrs['empty-text'] || '当前没有可显示的记录。'" compact :show-action="false" /></slot></template></el-table>
 </template>
 
 <style>
