@@ -36,9 +36,8 @@ export const tableFieldDefinitions = {
     { id: 'status', label: '订单状态', key: 'InstructionStatus', description: '取 instruction_status 字典。' },
     { id: 'side', label: '方向', key: 'EntrustBs', description: '1=买入，2=卖出；取 entrust_bs 字典。' },
     { id: 'attribute', label: '订单属性', key: 'InstructionProp', description: '限价单、市价单等，取 instruction_prop 字典。' },
-    { id: 'price', label: '订单价格', key: 'EntrustPrice', description: '市价单、0 或空值展示 --。' },
+    { id: 'price', label: '订单限价', key: 'EntrustPrice', description: '市价单、0 或空值展示 --。' },
     { id: 'orderValueNumber', label: '订单数量/金额', key: 'TotEntrustAmount', description: 'MonetaryQtyFlag=A 时展示 TotEntrustBalance，否则展示 TotEntrustAmount。' },
-    { id: 'reportQuantity', label: '挂单数量', key: 'ReportAmount', description: '服务端上报数量；0 或空值展示 --。' },
     { id: 'fillProgress', label: '成交进度', key: 'BusinessAmount / TotEntrustAmount', description: '已成数量 ÷ 订单数量；订单数量为空或为 0 时展示 --。' },
     { id: 'filledQuantity', label: '已成数量', key: 'BusinessAmount', description: '接口直接返回；0 或空值展示 --。' },
     { id: 'filledPrice', label: '成交均价', key: 'BusinessPrice', description: 'BusinessBalance / BusinessAmount，数量为 0 时展示 --。' },
@@ -56,6 +55,7 @@ export const tableFieldDefinitions = {
     { id: 'orderRemark', label: '下单备注', key: 'OrderRemark', description: '客户提交手工单时填写的备注。' },
     { id: 'feedback', label: '订单动态', key: 'Remark / TraderRemark', description: '合并系统反馈和交易员备注，并标明来源。' },
     { id: 'openClose', label: '开平方向', key: 'OpenClose', description: '1=开，2=平；取 open_close 字典。' },
+    { id: 'reportQuantity', label: '挂单数量', key: 'ReportAmount', description: '服务端上报数量；0 或空值展示 --。' },
   ],
   trades: [
     { id: 'side', label: '方向', key: 'EntrustBs', description: '1=买入，2=卖出；取 entrust_bs 字典。' },

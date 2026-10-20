@@ -587,11 +587,11 @@ function exportPositions(rows = sortedRows.value) {
   downloadCsv('持仓列表.csv', header, records)
 }
 function exportOrders(rows = orders.value) {
-  const header = ['证券代码', '证券名称', '订单状态', '方向', '订单属性', '订单价格', '订单数量', '订单金额', '挂单数量', '已成数量', '成交均价', '成交金额', '撤单数量', '撤单金额', '冻结保证金', '保证金率', '订单编号', '订单时间', '下单账户', '市场', '币种', '订单类型', '执行算法', '下单备注', '订单动态', '开平方向']
+  const header = ['证券代码', '证券名称', '订单状态', '方向', '订单属性', '订单限价', '订单数量', '订单金额', '已成数量', '成交均价', '成交金额', '撤单数量', '撤单金额', '冻结保证金', '保证金率', '订单编号', '订单时间', '下单账户', '市场', '币种', '订单类型', '执行算法', '下单备注', '订单动态', '开平方向', '挂单数量']
   const records = rows.map(row => [
     row.code, row.name, row.status, row.side === 'buy' ? '买' : '卖', row.type === 'market' ? '市价单' : '限价单',
-    row.price === null ? '--' : formatPrice(row.price, row.market), number(row.quantity), exportedOrderAmount(row), row.reportQuantity ? number(row.reportQuantity) : '--', row.filledQuantity ? number(row.filledQuantity) : '--', row.filledPrice === null ? '--' : formatPrice(row.filledPrice, row.market), filledAmount(row), row.canceledQuantity ? number(row.canceledQuantity) : '--', exportedCanceledAmount(row),
-    money(row.frozenMargin || 0), `${row.marginRate || 0}%`, row.orderNo, row.orderTime, accountLabel(row.account), marketLabel(row.market), currencyFor(row), row.orderType || '--', row.algorithm || '--', row.orderRemark || '--', orderActivity(row), row.openClose === '开' ? '开仓' : '平仓',
+    row.price === null ? '--' : formatPrice(row.price, row.market), number(row.quantity), exportedOrderAmount(row), row.filledQuantity ? number(row.filledQuantity) : '--', row.filledPrice === null ? '--' : formatPrice(row.filledPrice, row.market), filledAmount(row), row.canceledQuantity ? number(row.canceledQuantity) : '--', exportedCanceledAmount(row),
+    money(row.frozenMargin || 0), `${row.marginRate || 0}%`, row.orderNo, row.orderTime, accountLabel(row.account), marketLabel(row.market), currencyFor(row), row.orderType || '--', row.algorithm || '--', row.orderRemark || '--', orderActivity(row), row.openClose === '开' ? '开仓' : '平仓', row.reportQuantity ? number(row.reportQuantity) : '--',
   ])
   downloadCsv('订单记录.csv', header, records)
 }

@@ -13,12 +13,13 @@ const props = defineProps({ orders: { type: Array, default: () => [] }, accounts
 const emit = defineEmits(['chase', 'amend', 'cancel', 'bulk-cancel', 'update:detailHeight'])
 const columns = [
   ['code', '标的代码', 70], ['name', '标的名称', 74], ['side', '买卖', 44], ['status', '指令状态', 90],
-  ['price', '订单价格', 80], ['quantity', '订单数量/金额', 108], ['filledQuantity', '成交数量', 80],
+  ['price', '订单限价', 80], ['quantity', '订单数量/金额', 108], ['filledQuantity', '成交数量', 80],
   ['progress', '完成进度', 88], ['filledPrice', '成交均价', 80], ['filledAmount', '成交金额', 100],
-  ['attribute', '订单属性', 66], ['reportQuantity', '挂单数量', 80], ['canceled', '撤单数量/金额', 112],
+  ['attribute', '订单属性', 66], ['canceled', '撤单数量/金额', 112],
   ['frozenMargin', '冻结保证金', 112], ['marginRate', '保证金率', 80], ['feedback', '反馈信息', 114],
   ['orderNo', '订单编号', 120], ['orderTime', '下单时间', 132], ['account', '下单账户', 132], ['brokerAccount', '内部上手方账户', 148],
   ['source', '渠道来源', 110], ['orderType', '订单类型', 66], ['market', '市场', 48], ['currency', '币种', 48], ['openClose', '开平', 48],
+  ['reportQuantity', '挂单数量', 80],
 ]
 const columnOptions = columns.map(([key, label]) => [key, label])
 const columnDefaults = columns.map(([key]) => key)
@@ -194,7 +195,13 @@ const submittedDeals = computed(() => {
   return [{ ...row, index: 1, entrustNo: row.entrustNo || `${row.orderNo}-01`, filledTime: row.filledTime || '', externalInfo: row.externalInfo || '' }]
 })
 const detailRows = computed(() => childTab.value === 'entrustments' ? selected.value?.entrustments || [] : submittedDeals.value)
-const detailColumns = computed(() => childTab.value === 'entrustments' ? childColumns : dealColumns)
+const detailColumns = computed(() => {
+  const parentKeys = [...visibleColumnKeys.value, ...columnDefaults.filter(key => !visibleColumnKeys.value.includes(key))]
+  const parentOrder = new Map(parentKeys.map((key, index) => [key, index]))
+  const orderFor = key => key === 'index' ? -1 : parentOrder.get(key === 'canceledQuantity' ? 'canceled' : key) ?? parentKeys.length
+  return [...(childTab.value === 'entrustments' ? childColumns : dealColumns)]
+    .sort(([left], [right]) => orderFor(left) - orderFor(right))
+})
 </script>
 
 <template>
