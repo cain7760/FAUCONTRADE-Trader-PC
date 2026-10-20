@@ -102,7 +102,7 @@ const allAccountsValue = '__ALL_ACCOUNTS__'
 // 演示账户概要：不覆盖下单风控使用的 account.cash；汇率仅用于概要折算，并非实时行情。
 const demoAvailableCnyByAccount = Object.freeze({ TZS_T0: 1245527941.41, TZS_T1: 620800 })
 const demoFxToCny = Object.freeze({ CNY: 1, HKD: 0.92, USD: 7.10 })
-const workspace = ref(null), accountId = ref('TZS_T0'), selectedAccountIds = ref(['TZS_T0']), previousAccountSelection = ref(['TZS_T0']), query = ref(''), market = ref('ALL'), positionType = ref('ALL')
+const workspace = ref(null), accountId = ref('TZS_T0'), selectedAccountIds = ref(['TZS_T0']), previousAccountSelection = ref(['TZS_T0']), query = ref(''), positionType = ref('ALL')
 const globalAccountSearch = ref('')
 const assetsVisible = ref(true), assetsCollapsed = ref(false)
 const tab = ref('positions'), selectedCode = ref('000001'), table = ref(null), quote = ref(null), ticketResetKey = ref(0)
@@ -210,7 +210,7 @@ watch(orderFilterBar, bar => {
   }
 }, { flush: 'post' })
 onBeforeUnmount(() => orderFilterObserver?.disconnect())
-const appliedPositionFilters = ref({ query: '', market: 'ALL', positionType: 'ALL' })
+const appliedPositionFilters = ref({ query: '', positionType: 'ALL' })
 const appliedOrderFilters = ref({ orderNo: '', symbol: '', side: 'ALL', openClose: 'ALL', orderType: 'ALL', status: [] })
 const tradeFilters = ref({ symbol: '', side: 'ALL', openClose: 'ALL', orderType: 'ALL' })
 const appliedTradeFilters = ref({ symbol: '', side: 'ALL', openClose: 'ALL', orderType: 'ALL' })
@@ -297,7 +297,7 @@ const assetSummaryMetrics = computed(() => {
     { key: 'floatingProfit', label: '浮动盈亏', value: floatingProfit, tone: floatingProfit > 0 ? 'is-profit' : floatingProfit < 0 ? 'is-loss' : '' },
   ]
 })
-function filterPositionRows(rows) { return rows.filter(p => (!appliedPositionFilters.value.query || `${p.code}${p.name}`.includes(appliedPositionFilters.value.query.trim())) && (appliedPositionFilters.value.market === 'ALL' || p.market === appliedPositionFilters.value.market) && (appliedPositionFilters.value.positionType === 'ALL' || p.direction === appliedPositionFilters.value.positionType)) }
+function filterPositionRows(rows) { return rows.filter(p => (!appliedPositionFilters.value.query || `${p.code}${p.name}`.includes(appliedPositionFilters.value.query.trim())) && (appliedPositionFilters.value.positionType === 'ALL' || p.direction === appliedPositionFilters.value.positionType)) }
 const filtered = computed(() => filterPositionRows(allRows.value))
 function sortPositionRows(rows) {
   const { prop, direction } = sortState.value
@@ -568,12 +568,12 @@ function triggerDemoTransactionToast() {
   publishTransactionMessage({ name: '平安银行', code: '000001', status: '买入订单全部成交', quantity: 900, price: 11.78, title: '订单已全部成交' })
 }
 function toggleAssetsVisible() { assetsVisible.value = !assetsVisible.value; if (assetsCollapsed.value) assetsCollapsed.value = false }
-function applyFilters() { appliedPositionFilters.value = { query: query.value, market: market.value, positionType: positionType.value }; table.value?.setScrollTop?.(0) }
+function applyFilters() { appliedPositionFilters.value = { query: query.value, positionType: positionType.value }; table.value?.setScrollTop?.(0) }
 function applyOrderFilters() { appliedOrderFilters.value = { ...orderFilters.value, status: [...orderFilters.value.status] }; orderSortState.value = { prop: null, direction: null } }
 function clearOrderFilters() { orderFilters.value = { orderNo: '', symbol: '', side: 'ALL', openClose: 'ALL', orderType: 'ALL', status: [] }; applyOrderFilters() }
 function applyTradeFilters() { appliedTradeFilters.value = { ...tradeFilters.value }; tradeSortState.value = { prop: null, direction: null } }
 function clearTradeFilters() { tradeFilters.value = { symbol: '', side: 'ALL', openClose: 'ALL', orderType: 'ALL' }; applyTradeFilters() }
-function clearFilters() { query.value = ''; market.value = 'ALL'; positionType.value = 'ALL'; sortState.value = { prop: null, direction: null }; table.value?.clearFilter(); applyFilters() }
+function clearFilters() { query.value = ''; positionType.value = 'ALL'; sortState.value = { prop: null, direction: null }; table.value?.clearFilter(); applyFilters() }
 function downloadCsv(filename, header, records) {
   const csv = [header, ...records].map(record => record.map(value => `"${String(value).replaceAll('"', '""')}"`).join(',')).join('\n')
   const link = document.createElement('a')
@@ -861,16 +861,8 @@ function acceptAmendOrder(amendment) {
         feedback: `关联原订单 ${row.orderNo} 的未成交部分`, parentOrderNo: row.orderNo,
       })
       demoOrders.value.unshift(replacementOrder)
-      publishOrderActivityMessage(replacementOrder)
     }
-    publishOrderActivityMessage(row)
-    publishTransactionMessage({
-      name: row.name, code: row.code, status: '改单申请已提交', quantity: replacementQuantity,
-      quantityLabel: '未成交订单数量', price: nextPrice, priceLabel: '订单价格', title: '改单申请已提交',
-      content: replacementOrderNo
-        ? `${row.name}（${row.code}）已成交部分保持不变，未成交部分由订单 ${replacementOrderNo} 承接。`
-        : `${row.name}（${row.code}）未成交部分已撤，已成交部分保持不变。`,
-    })
+    ElMessage.success('改单提交成功')
     tab.value = 'orders'
     return
   }
@@ -906,7 +898,6 @@ function acceptAmendOrder(amendment) {
       estimate: referencePrice * delta, traderRemark: `关联原订单 ${row.orderNo} 的追单`, parentOrderNo: row.orderNo,
     })
     demoOrders.value.unshift(nextOrder)
-    publishOrderActivityMessage(nextOrder)
     row.feedback = `改单已受理：新增追单 ${number(delta)} 股`
   } else if (delta < 0) {
     const canceledQuantity = Math.abs(delta)
@@ -919,13 +910,7 @@ function acceptAmendOrder(amendment) {
   } else {
     row.feedback = '改单已受理：订单参数已更新'
   }
-  publishOrderActivityMessage(row)
-  publishTransactionMessage({
-    name: row.name, code: row.code, status: `${amendment.operation}申请已提交`, quantity: Math.abs(delta) || amendment.quantity,
-    quantityLabel: amendment.operation === '追单' ? '追单数量' : amendment.operation === '部撤' ? '部撤数量' : '订单数量',
-    price: nextPrice, priceLabel: '订单价格', title: '改单申请已提交',
-    content: `${row.name}（${row.code}）改单申请已提交：${amendment.operation}${delta ? ` ${number(Math.abs(delta))} 股` : '订单参数调整'}。`,
-  })
+  ElMessage.success('改单提交成功')
   tab.value = 'orders'
 }
 function publishOrderOperationMessage(row, operation, success) {
@@ -1000,7 +985,7 @@ onBeforeUnmount(() => {
 })
 provide(tradingContextKey, {
   assetUrl, variant, systemRunning, transactionToasts, messageIcon, allAccountsValue, workspace, selectedAccountIds,
-  market, globalAccountSearch, assetsVisible, assetsCollapsed, tab, selectedCode, quote, ticketResetKey,
+  globalAccountSearch, assetsVisible, assetsCollapsed, tab, selectedCode, quote, ticketResetKey,
   ticketContext, closePositionVisible, closingPosition, chaseOrderVisible, chasingPosition, chasingOrder, amendOrderVisible, amendingOrder,
   cancelOrderVisible, cancelingOrder, bulkCancelVisible, bulkCancelIds, instructionTable, convertManualVisible, convertingManualOrder, conversionRemark,
   historyVisible, historyRecord, demoOrders, dock, collapsed, dragging, resizing, floating,
