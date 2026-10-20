@@ -7,6 +7,7 @@ import { accounts, brokerAccounts } from './fixtures'
 import { marketInstruments, variantRows, variants, money, number, price as formatPrice } from './variantData'
 import { channelSources } from './channelSource'
 import { columnOptionsFor } from './tableFieldDefinitions'
+import { orderTypeError } from './orderMarketRules.js'
 import { currencyFor, orderActivity } from './tradingPresentation'
 import { useTicketDock } from './useTicketDock'
 import { useDialogShortcuts } from '../../composables/useDialogShortcuts'
@@ -689,6 +690,8 @@ function assetAmountParts(value) {
 }
 function acceptOrder(order, { skipHtSync = false } = {}) {
   if (!systemRunning.value) return
+  const typeError = orderTypeError(order.type, order)
+  if (typeError) { ElMessage.error(typeError); return }
   const nextOrder = enrichOrder(order)
   demoOrders.value.unshift(nextOrder)
   publishOrderActivityMessage(nextOrder)
@@ -749,6 +752,8 @@ function openChaseOrder(row) {
 }
 function acceptClosePosition(order) {
   if (!systemRunning.value) return
+  const typeError = orderTypeError(order.type, order)
+  if (typeError) { ElMessage.error(typeError); return }
   const nextOrder = enrichOrder(order)
   demoOrders.value.unshift(nextOrder)
   publishOrderActivityMessage(nextOrder)
@@ -757,6 +762,8 @@ function acceptClosePosition(order) {
 }
 function acceptChaseOrder(order) {
   if (!systemRunning.value) return
+  const typeError = orderTypeError(order.type, order)
+  if (typeError) { ElMessage.error(typeError); return }
   const nextOrder = enrichOrder(order)
   demoOrders.value.unshift(nextOrder)
   publishOrderActivityMessage(nextOrder)
@@ -816,6 +823,8 @@ function acceptAmendOrder(amendment) {
   if (!systemRunning.value) return
   const row = demoOrders.value.find(item => item.id === amendment.orderId)
   if (!row || !canOperateOrder(row)) return
+  const typeError = orderTypeError(amendment.type, { ...amendingSymbol.value, ...row })
+  if (typeError) { ElMessage.error(typeError); return }
   const isLimit = amendment.type !== 'market'
   const nextPrice = isLimit ? amendment.price : null
   const delta = amendment.quantityDelta
