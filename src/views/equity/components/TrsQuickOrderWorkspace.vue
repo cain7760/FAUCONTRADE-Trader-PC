@@ -1,7 +1,7 @@
 <script setup>
 import { computed, inject, ref, watch } from 'vue'
 import { ArrowDownBold, Hide, View } from '@element-plus/icons-vue'
-import { money } from '../variantData'
+import { money, signedMoney } from '../variantData'
 import { tradingContextKey } from '../tradingContext'
 import OrderBook from './OrderBook.vue'
 import OrderTicket from './OrderTicket.vue'
@@ -49,12 +49,12 @@ watch(() => props.symbol?.code, () => { quote.value = null })
         </header>
         <OrderTicket :key="`${symbol.code}-${initialOrder?.price}-${initialOrder?.quantity}`" :instruments="instruments" :accounts="accounts" :symbol="symbol" :account="tradingAccount" :quote="quote" :paused="paused" show-framework customer-order-readonly :ticket-context="ticketContext" :initial-order="initialOrder" :counterparties="counterparties" @account-select="emit('account-select', $event)" @select="selectSymbol" @order="emit('order', $event)" />
       </section>
-      <section class="compact-assets ticket-assets" :class="{ 'is-collapsed': assetsCollapsed }" aria-label="资产账户概要">
+      <section class="compact-assets ticket-assets is-portfolio-summary" :class="{ 'is-collapsed': assetsCollapsed }" aria-label="资产账户概要">
         <div class="asset-summary-heading"><span>资产账户概要</span><button type="button" class="asset-visibility" :aria-label="assetsVisible ? '隐藏资金数值' : '查看资金数值'" @click="assetsVisible = !assetsVisible"><el-icon><View v-if="assetsVisible" /><Hide v-else /></el-icon></button><button type="button" class="asset-collapse" :aria-label="assetsCollapsed ? '展开资产账户概要' : '收起资产账户概要'" @click="assetsCollapsed = !assetsCollapsed"><el-icon><ArrowDownBold /></el-icon></button></div>
         <div v-show="!assetsCollapsed" class="asset-summary-grid">
           <div v-for="metric in assetSummaryMetrics" :key="metric.key" class="asset-metric" :class="[metric.tone, { 'asset-available': metric.key === 'available' }]">
             <span>{{ metric.label }}</span>
-            <el-tooltip v-if="assetsVisible && metric.value != null" placement="top" popper-class="asset-value-popper"><template #content><span class="asset-large-value" :class="metric.tone"><template v-for="part in assetAmountParts(metric.value)" :key="`${part.value}${part.unit}`"><b>{{ part.value }}</b><i v-if="part.unit">{{ part.unit }}</i></template></span></template><b class="asset-number" :class="metric.tone">{{ money(metric.value) }}</b></el-tooltip>
+            <el-tooltip v-if="assetsVisible && metric.value != null" placement="top" popper-class="asset-value-popper"><template #content><span class="asset-large-value" :class="metric.tone"><template v-for="part in assetAmountParts(metric.value, metric.key === 'floatingProfit')" :key="`${part.value}${part.unit}`"><b>{{ part.value }}</b><i v-if="part.unit">{{ part.unit }}</i></template></span></template><b class="asset-number" :class="metric.tone">{{ metric.key === 'floatingProfit' ? signedMoney(metric.value) : money(metric.value) }}</b></el-tooltip>
             <b v-else class="asset-number">{{ assetsVisible ? '--' : '••••••••' }}</b><small>CNY</small>
           </div>
         </div>

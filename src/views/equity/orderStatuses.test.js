@@ -2,6 +2,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { parse, compileScript } from '@vue/compiler-sfc'
+import { instructionStatusLabel } from './instructionStatus.js'
 
 const { descriptor } = parse(readFileSync(new URL('./EquityVariants.vue', import.meta.url), 'utf8'))
 const ast = compileScript(descriptor, { id: 'order-status-test' }).scriptSetupAst
@@ -37,24 +38,57 @@ test('所有演示订单使用有效状态，拒单与异常保留独立样本�
   assert.equal(visual('部撤').tone, 'draft')
 })
 
-test('新状态沿用原操作门禁，拒单系统单可转手工，异常不可交易', () => {
+test('仅异常系统单允许转手工，拒单和手工单不可转，改撤门禁不变', () => {
   const context = { systemRunning: { value: true }, cancelableQuantity: evaluate('cancelableQuantity') }
   const canOperate = evaluate('canOperateOrder', context), canConvert = evaluate('canConvertToManual', context)
   const row = { quantity: 1000, filledQuantity: 0, orderType: '系统单' }
   for (const status of expected) assert.equal(canOperate({ ...row, status }), ['待报', '已报', '部成'].includes(status))
-  assert.equal(canConvert({ ...row, status: '拒单' }), true)
+  assert.equal(canConvert({ ...row, status: '拒单' }), false)
   assert.equal(canConvert({ ...row, status: '拒单', orderType: '手工单' }), false)
-  assert.equal(canConvert({ ...row, status: '异常' }), false)
+  assert.equal(canConvert({ ...row, status: '异常' }), true)
+  assert.equal(canConvert({ ...row, status: '异常', orderType: '手工单' }), false)
   assert.deepEqual([...evaluate('terminalOrderStatuses')], ['部撤', '撤单', '全成', '拒单'])
+})
+
+test('指令撤单按指令状态判断，委托收盘撤回后仍可撤销未终态指令', () => {
+  const systemRunning = { value: true }
+  const cancelableQuantity = evaluate('cancelableQuantity')
+  const canCancelInstruction = evaluate('canCancelInstruction', { systemRunning, cancelableQuantity, instructionStatusLabel })
+  const row = { id: 'active', status: '撤单', instructionStatusCode: '2', quantity: 1000, filledQuantity: 0 }
+  assert.equal(evaluate('canOperateOrder', { systemRunning, cancelableQuantity })(row), false)
+  assert.equal(canCancelInstruction(row), true)
+  assert.equal(canCancelInstruction({ ...row, instructionStatusCode: '8' }), false)
+  assert.equal(canCancelInstruction({ ...row, instructionStatusCode: '6' }), false)
+  const bulkCancelIds = { value: [] }, bulkCancelVisible = { value: false }
+  evaluate('openBulkCancel', { bulkCancelIds, bulkCancelVisible, demoOrders: { value: [row] }, canCancelInstruction })(['active'])
+  assert.deepEqual(bulkCancelIds.value, ['active'])
+  assert.equal(bulkCancelVisible.value, true)
+  const cancelInstruction = evaluate('cancelInstruction', {
+    canCancelInstruction, canOperateOrder: () => false, cancelableQuantity,
+    publishOrderActivityMessage() {}, publishOrderOperationMessage() {},
+  })
+  let feedback = '', cleared = false
+  evaluate('confirmBulkCancel', {
+    bulkCancelIds, bulkCancelVisible, demoOrders: { value: [row] }, cancelInstruction,
+    instructionTable: { value: { clearSelection: () => { cleared = true } } },
+    ElMessage: { success: value => { feedback = value }, warning: value => { feedback = value } },
+  })()
+  assert.equal(row.instructionStatusCode, '6')
+  assert.equal(row.status, '撤单')
+  assert.equal(feedback, '批量撤单：成功 1 条，跳过 0 条。')
+  assert.equal(cleared, true)
+  assert.equal(canCancelInstruction(row), false)
+  systemRunning.value = false
+  assert.equal(canCancelInstruction({ ...row, instructionStatusCode: '2' }), false)
 })
 
 test('实际撤单逻辑写入撤单或部撤，已成交数量保持不变', () => {
   for (const filledQuantity of [0, 400]) {
     const row = { status: filledQuantity ? '部成' : '已报', quantity: 1000, filledQuantity, reportQuantity: 1000 - filledQuantity }
-    const context = { systemRunning: { value: true }, cancelingOrder: { value: row }, cancelOrderVisible: { value: true },
+    const context = { systemRunning: { value: true }, cancelingOrder: { value: row }, cancelOrderVisible: { value: true }, cancelFromInstruction: { value: false },
       canOperateOrder: () => true, cancelableQuantity: evaluate('cancelableQuantity'),
       publishOrderActivityMessage() {}, publishOrderOperationMessage() {} }
-    if (ast.some(node => node.type === 'FunctionDeclaration' && node.id.name === 'cancelInstruction')) context.cancelInstruction = evaluate('cancelInstruction', context)
+    context.cancelInstruction = evaluate('cancelInstruction', context)
     evaluate('confirmCancelOrder', context)()
     assert.equal(row.status, filledQuantity ? '部撤' : '撤单')
     assert.equal(row.filledQuantity, filledQuantity)

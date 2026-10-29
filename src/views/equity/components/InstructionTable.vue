@@ -1,13 +1,14 @@
 <script setup>
+import { withoutShareUnit } from '../../../utils/tableQuantity.js'
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { money, number, price as formatPrice } from '../variantData'
 import { channelSourceLabel } from '../channelSource'
 import { instructionStatusLabel, instructionStatuses } from '../instructionStatus'
 import { currencyFor, moneyWithUnit, sharesWithUnit } from '../tradingPresentation'
-import TradingTable from './TradingTable.vue'
+import TradingTable from '../../../components/trading/TradingTable.vue'
 import InstructionDetailTable from './InstructionDetailTable.vue'
-import ColumnConfigPopover from './ColumnConfigPopover.vue'
-import SortHeader from './SortHeader.vue'
+import ColumnConfigPopover from '../../../components/trading/ColumnConfigPopover.vue'
+import SortHeader from '../../../components/trading/SortHeader.vue'
 
 const props = defineProps({ orders: { type: Array, default: () => [] }, accounts: { type: Array, default: () => [] }, canChase: { type: Function, required: true }, canAmend: { type: Function, required: true }, canCancel: { type: Function, required: true }, actionLabel: { type: Function, required: true }, detailHeight: { type: Number, default: null } })
 const emit = defineEmits(['chase', 'amend', 'cancel', 'bulk-cancel', 'update:detailHeight'])
@@ -118,7 +119,7 @@ function resetFilters() { filters.value = defaultFilters(); appliedFilters.value
 defineExpose({ clearSelection: () => { table.value?.clearSelection(); selectedRows.value = [] } })
 const accountName = id => { const account = props.accounts.find(item => item.id === id); return account ? `${id} - ${account.name}` : id || '--' }
 const amountOrQuantity = row => row.inputAmount != null || row.orderValueMode === 'amount' ? moneyWithUnit(row.orderValueNumber ?? row.inputAmount ?? row.estimate) : sharesWithUnit(row.quantity)
-const cancelValue = row => row.canceledAmount ? `${money(row.canceledAmount)} CNY` : row.canceledQuantity ? `${number(row.canceledQuantity)} 股` : '--'
+const cancelValue = row => row.canceledAmount ? `${money(row.canceledAmount)} CNY` : row.canceledQuantity ? number(row.canceledQuantity) : '--'
 const numericColumns = new Set(['price', 'quantity', 'reportQuantity', 'filledQuantity', 'progress', 'filledPrice', 'filledAmount', 'canceled', 'frozenMargin', 'marginRate'])
 const progress = row => row.quantity ? Math.min(100, Math.round((row.filledQuantity || 0) / row.quantity * 100)) : 0
 function numericSortValue(row, key) {
@@ -153,7 +154,7 @@ const shown = (row, key) => {
     case 'side': return row.side === 'buy' ? '买' : '卖'
     case 'price': return row.price == null ? '市价' : formatPrice(row.price, row.market)
     case 'quantity': return amountOrQuantity(row)
-    case 'reportQuantity': case 'filledQuantity': case 'canceledQuantity': return sharesWithUnit(row[key] || 0)
+    case 'reportQuantity': case 'filledQuantity': case 'canceledQuantity': return withoutShareUnit(sharesWithUnit(row[key] || 0))
     case 'filledPrice': return row.filledPrice == null ? '--' : formatPrice(row.filledPrice, row.market)
     case 'canceled': return cancelValue(row)
     case 'frozenMargin': return moneyWithUnit(row.frozenMargin || 0)
@@ -239,7 +240,7 @@ const detailColumns = computed(() => {
       <template #default="{ row }"><div class="order-row-actions">
         <el-tooltip :content="actionLabel(row, '追加订单')" placement="top" :show-after="300" popper-class="variant-popper order-action-popper"><span class="operation-tooltip"><button type="button" class="order-chase-action" :aria-label="actionLabel(row, '追加订单')" :disabled="!canChase(row)" @click.stop="emit('chase', row)">追</button></span></el-tooltip>
         <el-tooltip :content="actionLabel(row, '修改订单')" placement="top" :show-after="300" popper-class="variant-popper order-action-popper"><span class="operation-tooltip"><button type="button" class="order-amend-action" :aria-label="actionLabel(row, '修改订单')" :disabled="!canAmend(row)" @click.stop="emit('amend', row)">改</button></span></el-tooltip>
-        <el-tooltip :content="actionLabel(row, '撤单')" placement="top" :show-after="300" popper-class="variant-popper order-action-popper"><span class="operation-tooltip"><button type="button" class="order-cancel-action" :aria-label="actionLabel(row, '撤单')" :disabled="!canCancel(row)" @click.stop="emit('cancel', row)">撤</button></span></el-tooltip>
+        <el-tooltip :content="canCancel(row) ? '撤单' : actionLabel(row, '撤单')" placement="top" :show-after="300" popper-class="variant-popper order-action-popper"><span class="operation-tooltip"><button type="button" class="order-cancel-action" :aria-label="canCancel(row) ? '撤单' : actionLabel(row, '撤单')" :disabled="!canCancel(row)" @click.stop="emit('cancel', row)">撤</button></span></el-tooltip>
       </div></template>
     </el-table-column>
   </TradingTable>

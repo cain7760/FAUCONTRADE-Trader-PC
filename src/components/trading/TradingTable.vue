@@ -1,7 +1,7 @@
 <script setup>
 import { ElMessage } from 'element-plus'
 import { ref } from 'vue'
-import ExceptionState from '../../../components/ExceptionState.vue'
+import ExceptionState from '../ExceptionState.vue'
 
 defineOptions({ inheritAttrs: false })
 const props = defineProps({ copyableIdentifiers: Boolean })

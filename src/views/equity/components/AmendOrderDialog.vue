@@ -256,7 +256,7 @@ useDialogShortcuts(isOpen, { confirm: submit, cancel: close })
 .variants-app .amend-order-dialog .cp-market .book-depths { transform: none; }
 .variants-app .amend-order-dialog .amend-order-capacity { margin-top: 12px; }
 .variants-app .amend-order-dialog .amend-order-capacity b,
-.variants-app .amend-order-dialog .amend-order-summary b { font-family: 'D-DIN Exp', 'DIN Alternate', 'Arial Narrow', sans-serif; font-variant-numeric: tabular-nums; }
+.variants-app .amend-order-dialog .amend-order-summary b { font-family: var(--ft-font-numeric); font-variant-numeric: tabular-nums; }
 .variants-app .amend-order-dialog .amend-order-summary b { font-weight: 400; }
 .variants-app .amend-order-dialog .cp-order { display: flex; flex-direction: column; overflow: hidden; }
 .variants-app .amend-order-dialog .cp-order > .order-form.amend-order-form { flex: 1; min-height: 0; max-height: none; padding: 20px 12px 12px!important; overflow-y: auto; }

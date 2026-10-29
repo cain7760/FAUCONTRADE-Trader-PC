@@ -812,6 +812,16 @@
   min-width: 52px;
 }
 
+.algorithm-popper .algorithm-menu-actions .el-button--primary {
+  --el-button-bg-color: #bb984a;
+  --el-button-border-color: #bb984a;
+  --el-button-hover-bg-color: #bb984a;
+  --el-button-hover-border-color: #bb984a;
+  --el-button-active-bg-color: #bb984a;
+  --el-button-active-border-color: #bb984a;
+  --el-button-outline-color: #dfc170;
+}
+
 .algorithm-menu-actions .el-button:not(.el-button--primary) {
   --el-button-bg-color: #272b31;
   --el-button-border-color: #4b535e;
@@ -849,7 +859,7 @@
 .trs-quick-order-workspace .trade-dock {
   display: grid;
   grid-template-columns: 294px minmax(0, 1fr);
-  grid-template-rows: minmax(0, 1fr) 142px;
+  grid-template-rows: minmax(0, 1fr) 116px;
   grid-template-areas: 'book ticket' 'book assets';
   column-gap: 1px;
   row-gap: 0;
@@ -871,6 +881,10 @@
   border-radius: 0;
 }
 .trs-quick-order-workspace .ticket-assets { grid-area: assets; border-left: 0 !important; border-radius: 0 0 4px 0 !important; }
+.variants-app .trs-quick-order-workspace .ticket-assets.is-portfolio-summary { grid-template-rows: 32px minmax(0, 1fr); height: 116px !important; }
+.variants-app .trs-quick-order-workspace .ticket-assets.is-portfolio-summary > .asset-summary-heading { height: 32px !important; }
+.variants-app .trs-quick-order-workspace .ticket-assets.is-portfolio-summary .asset-summary-grid { grid-template-rows: repeat(3, minmax(0, 1fr)); gap: 8px !important; padding: 4px 12px !important; }
+.variants-app .trs-quick-order-workspace .ticket-assets.is-portfolio-summary .asset-summary-grid .asset-metric + .asset-metric { border-top: 0 !important; }
 .trs-quick-order-workspace .book-scroll,
 .trs-quick-order-workspace .order-form { min-height: 0; overflow: auto; }
 
@@ -2210,6 +2224,27 @@
   text-overflow: ellipsis;
   white-space: nowrap;
   font-size: 12px;
+}
+
+.variants-app .variants-workspace .order-account-framework-trigger {
+  width: 100%;
+  min-width: 0;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px;
+  padding: 0 4px;
+  border: 0;
+  background: transparent;
+  color: #e8eaed;
+  cursor: pointer;
+}
+
+.variants-app .variants-workspace .order-account-framework-trigger > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* 交易员只选上手方；客户原始订单参数保持高对比的只读态。 */
