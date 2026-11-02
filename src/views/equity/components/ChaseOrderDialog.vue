@@ -51,6 +51,7 @@ function submit(order) {
 </template>
 
 <style>
+.variants-app .chase-dialog .order-account-block .el-select__wrapper.is-disabled .el-select__suffix{display:none}
 .variants-app .chase-dialog .cp-layout{box-sizing:border-box;height:auto;min-height:560px;max-height:none;overflow:visible}
 .variants-app .chase-dialog .cp-layout::before{display:none}
 .variants-app .chase-dialog .cp-market{height:auto;overflow:visible}
