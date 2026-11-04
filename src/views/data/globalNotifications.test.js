@@ -22,3 +22,4 @@ test('全局交易消息不随权益页或历史页切换而卸载', () => {
   assert.equal(conditional(slot), false)
   assert.doesNotMatch(read('../equity/pages/EquityTradingPage.vue'), /transaction-toast-stack/)
 })
+

@@ -17,6 +17,7 @@ import OrdersTable from '../components/OrdersTable.vue'
 import TradesTable from '../components/TradesTable.vue'
 import InstructionTable from '../components/InstructionTable.vue'
 const instructionDetailHeight = ref(null)
+const { tradingTimeMode, setTradingTimeMode } = inject(tradingContextKey)
 const { assetUrl, variant, systemRunning, allAccountsValue, workspace, selectedAccountIds, globalAccountSearch, assetsVisible, assetsCollapsed, tab, selectedCode, quote, ticketResetKey, ticketContext, closePositionVisible, closingPosition, chaseOrderVisible, chasingPosition, chasingOrder, amendOrderVisible, amendingOrder, cancelOrderVisible, cancelingOrder, bulkCancelVisible, bulkCancelIds, instructionTable, convertManualVisible, convertingManualOrder, conversionRemark, historyVisible, historyRecord, demoOrders, dock, collapsed, dragging, resizing, floating, start, startResize, isTicketLayoutModified, account, closingAccount, chasingAccount, amendingAccount, amendingSymbol, effectiveAccountIds, filteredGlobalAccounts, instruments, selected, allRows, assetSummaryMetrics, orders, trades, positionRowsForAccounts, ordersForAccounts, tradesForAccounts, floatStyle, resetTicketLayout, toggleSystemStatus, accountLabel, marketLabel, toggleAssetsVisible, updateGlobalAccountSelection, handleGlobalAccountVisible, selectTicketAccount, assetAmountParts, acceptOrder, acceptClosePosition, acceptChaseOrder, cancelableQuantity, canOperateOrder, canCancelInstruction, canChaseOrder, canAmendOrder, canConvertToManual, orderActionLabel, openOrderChase, openCancelOrder, openCancelInstruction, openBulkCancel, openConvertToManual, confirmConvertToManual, openAmendOrder, acceptAmendOrder, confirmCancelOrder, confirmBulkCancel } = inject(tradingContextKey)
 
 const tabIds = ['positions', 'instructions', 'orders', 'trades']
@@ -268,7 +269,7 @@ onBeforeUnmount(() => stopPointerTracking?.())
       </section>
       <div v-if="tabDragPreview" class="tab-drag-preview" :style="{ left:`${tabDragPreview.x}px`, top:`${tabDragPreview.y}px` }">{{ tabDragPreview.label }} · 松开以悬浮</div>
     </div>
-    <footer class="variant-status"><span class="system-status"><i class="status-dot" :class="{ 'is-interrupted': !systemRunning }"/>{{ systemRunning ? '运行中' : '系统中断' }} · 演示环境<button type="button" class="system-status-toggle" @click="toggleSystemStatus">{{ systemRunning ? '切换为中断' : '恢复运行' }}</button></span><span>行情：静态快照</span><span class="status-end">系统版本：方案 V0.2</span></footer>
+    <footer class="variant-status"><span class="system-status"><i class="status-dot" :class="{ 'is-interrupted': !systemRunning }"/>{{ systemRunning ? '运行中' : '系统中断' }} · 演示环境<button type="button" class="system-status-toggle" @click="toggleSystemStatus">{{ systemRunning ? '切换为中断' : '恢复运行' }}</button><span class="demo-trading-time" role="group" aria-label="演示交易时间"><button type="button" class="system-status-toggle" :aria-pressed="tradingTimeMode === 'trading'" @click="setTradingTimeMode('trading')">交易时间</button><button type="button" class="system-status-toggle" :aria-pressed="tradingTimeMode === 'non-trading'" @click="setTradingTimeMode('non-trading')">非交易时间</button></span></span><span>行情：静态快照</span><span class="status-end">系统版本：方案 V0.2</span></footer>
     <ClosePositionDialog v-model="closePositionVisible" :position="closingPosition" :account="closingAccount" :broker-accounts="brokerAccounts" :paused="!systemRunning" @submit="acceptClosePosition" />
     <ChaseOrderDialog :paused="!systemRunning" v-model="chaseOrderVisible" :position="chasingPosition" :order="chasingOrder" :account="chasingAccount" :broker-accounts="brokerAccounts" @submit="acceptChaseOrder" />
     <AmendOrderDialog v-model="amendOrderVisible" :order="amendingOrder" :symbol="amendingSymbol" :account="amendingAccount" :broker-accounts="brokerAccounts" @submit="acceptAmendOrder" />
@@ -345,4 +346,10 @@ onBeforeUnmount(() => stopPointerTracking?.())
 .variants-app .detached-window-actions .el-icon{font-size:15px}
 .variants-app .detached-tab-resize{position:absolute;right:0;bottom:0;z-index:2;width:17px;height:17px;padding:0;border:0;background:linear-gradient(135deg,transparent 62%,#8f7947 63%,#8f7947 69%,transparent 70%);cursor:nwse-resize;touch-action:none}
 .variants-app .tab-drag-preview{position:fixed;z-index:79;padding:6px 10px;border:1px solid #bb984a;border-radius:3px;background:#302c24;color:#e1c36f;box-shadow:0 8px 24px #0008;pointer-events:none;white-space:nowrap}
+</style>
+
+<style scoped>
+.demo-trading-time { display: inline-flex; align-items: center; gap: 8px; margin-left: 12px; }
+.variants-app .demo-trading-time .system-status-toggle { margin-left: 0; padding: 0 4px; background: transparent; color: #8e949e; }
+.variants-app .demo-trading-time button[aria-pressed="true"] { color: #bb984a; }
 </style>

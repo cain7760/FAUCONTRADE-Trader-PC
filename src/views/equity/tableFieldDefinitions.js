@@ -1,5 +1,6 @@
 // 收益互换三张列表的字段契约。
-// `key` 为接口字段 Key；`id` 为当前前端列配置使用的稳定标识。
+// `key` 为接口字段 Key。
+// `id` 为当前前端列配置使用的稳定标识。
 // 展示层可继续使用本地演示字段，但接入接口时必须以 key 为准。
 export const tableFormattingRules = {
   truncation: '金额和价格仅截断，不允许四舍五入。',
@@ -73,9 +74,6 @@ export const tableFieldDefinitions = {
     { id: 'market', label: '市场', key: 'ExchangeType', description: 'HK/US/CN，经 exchange_type 字典展示。' },
     { id: 'currency', label: '币种', key: 'Currency', description: '优先使用成交币种，演示数据缺失时按市场推断。' },
     { id: 'orderType', label: '订单类型', key: 'OrderSourceType', description: '系统单或手工单。' },
-    { id: 'algorithm', label: '执行算法', key: 'ExecutionAlgorithm', description: '来源订单的执行算法，如 POV、DMA。' },
-    { id: 'orderRemark', label: '下单备注', key: 'OrderRemark', description: '客户提交手工单时填写的备注。' },
-    { id: 'feedback', label: '订单动态', key: 'Remark / TraderRemark', description: '合并系统反馈和交易员备注，并标明来源。' },
     { id: 'openClose', label: '开平方向', key: 'OpenClose', description: '1=开，2=平；取 open_close 字典。' },
   ],
 }

@@ -4,7 +4,7 @@ import { ElMessage } from 'element-plus'
 import { CircleCheck, CircleClose, Close, EditPen, More } from '@element-plus/icons-vue'
 import SettingsMenuIcon from '../../SettingsMenuIcon.vue'
 import { accounts, brokerAccounts } from './fixtures'
-import { marketInstruments, variantRows, variants, money, number, price as formatPrice } from './variantData'
+import { marketInstruments, variantRows, variants, money, signedMoney, number, price as formatPrice } from './variantData'
 import { channelSources } from './channelSource'
 import { instructionStatusLabel } from './instructionStatus'
 import { columnOptionsFor } from './tableFieldDefinitions'
@@ -24,6 +24,8 @@ import FinancingPage from './pages/FinancingPage.vue'
 import StrategyTradingPage from './pages/StrategyTradingPage.vue'
 import DataPage from '../data/DataPage.vue'
 import { useOrderSessionExpiry } from '../../composables/useOrderSessionExpiry.js'
+import { useTradingTime } from '../../composables/useTradingTime.js'
+import { deferLunchOperation, flushLunchOperations } from '../../domain/orders/lunchBreak.js'
 import { marketClock } from '../../domain/orders/marketSession.js'
 
 const initialVariant = new URLSearchParams(location.search).get('layout')
@@ -57,6 +59,12 @@ const theme = ref('dark')
 const autoLaunch = ref(false)
 const emergencyMessage = ref(null)
 const systemRunning = ref(true)
+const { tradingTimeMode, setTradingTimeMode, tradingTimeError } = useTradingTime()
+function canSubmitTradingOperation() {
+  const error = tradingTimeError()
+  if (error) { ElMessage.error(error); return false }
+  return true
+}
 const transactionToasts = ref([])
 const transactionToastTimers = new Map()
 const headerNotice = computed(() => systemRunning.value ? null : {
@@ -181,7 +189,7 @@ const demoOrders = ref(demoOrderStatuses.map((status, index) => {
   return { ...order, ...demoInstructionDetails(order) }
 }))
 const syncedHtPositions = ref([])
-const syncOrderClose = useOrderSessionExpiry(demoOrders)
+const syncOrderClose = useOrderSessionExpiry(demoOrders, { demoMode: tradingTimeMode, onTick: processLunchOperations })
 const orderFilters = ref({ orderNo: '', symbol: '', side: 'ALL', openClose: 'ALL', orderType: 'ALL', status: [] })
 const orderFilterBar = ref(null)
 const visibleOrderFilterCount = ref(5)
@@ -613,10 +621,10 @@ function exportOrders(rows = orders.value) {
   downloadCsv('订单记录.csv', header, records)
 }
 function exportTrades(rows = sortedTrades.value) {
-  const header = ['方向', '证券代码', '证券名称', '成交均价', '成交数量', '成交金额', '成交时间', '下单时间', '成交编号', '订单编号', '交易日期', '下单账户', '市场', '币种', '订单类型', '执行算法', '下单备注', '订单动态', '开平方向']
+  const header = ['方向', '证券代码', '证券名称', '成交均价', '成交数量', '成交金额', '成交时间', '下单时间', '成交编号', '订单编号', '交易日期', '下单账户', '市场', '币种', '订单类型', '开平方向']
   const records = rows.map(row => [
     row.side === 'buy' ? '买' : '卖', row.code, row.name, formatPrice(row.filledPrice, row.market), number(row.filledQuantity), money(row.filledAmount),
-    timeLabel(row.filledTime), timeLabel(row.orderTime), row.tradeNo, row.entrustNo, row.tradeDate, accountLabel(row.account), marketLabel(row.market), currencyFor(row), row.orderType || '--', row.algorithm || '--', row.orderRemark || '--', orderActivity(row), row.openClose === '开' ? '开仓' : '平仓',
+    timeLabel(row.filledTime), timeLabel(row.orderTime), row.tradeNo, row.entrustNo, row.tradeDate, accountLabel(row.account), marketLabel(row.market), currencyFor(row), row.orderType || '--', row.openClose === '开' ? '开仓' : '平仓',
   ])
   downloadCsv('成交记录.csv', header, records)
 }
@@ -707,6 +715,7 @@ function assetAmountParts(value, signed = false) {
   return parts
 }
 function acceptOrder(order, { skipHtSync = false } = {}) {
+  if (!canSubmitTradingOperation()) return
   if (!systemRunning.value) return
   const typeError = orderTypeError(order.type, order)
   if (typeError) { ElMessage.error(typeError); return }
@@ -769,6 +778,7 @@ function openChaseOrder(row) {
   chaseOrderVisible.value = true
 }
 function acceptClosePosition(order) {
+  if (!canSubmitTradingOperation()) return
   if (!systemRunning.value) return
   const typeError = orderTypeError(order.type, order)
   if (typeError) { ElMessage.error(typeError); return }
@@ -779,6 +789,7 @@ function acceptClosePosition(order) {
   publishTransactionMessage({ name: order.name, code: order.code, status: '卖出平仓订单已提交', quantity: order.quantity, quantityLabel: '订单数量', title: '平仓订单提交成功' })
 }
 function acceptChaseOrder(order) {
+  if (!canSubmitTradingOperation()) return
   if (!systemRunning.value) return
   const typeError = orderTypeError(order.type, order)
   if (typeError) { ElMessage.error(typeError); return }
@@ -839,16 +850,29 @@ function openAmendOrder(row) {
   amendingOrder.value = row
   amendOrderVisible.value = true
 }
+function processLunchOperations() {
+  if (!systemRunning.value) return
+  flushLunchOperations(demoOrders.value, (row, pending) => {
+    if (pending.action === 'amend') acceptAmendOrder(pending.payload)
+    else completeCancellation(row, pending.payload)
+  }, new Date(), tradingTimeMode.value)
+}
 function acceptAmendOrder(amendment) {
+  if (!canSubmitTradingOperation()) return
   if (!systemRunning.value) return
   const row = demoOrders.value.find(item => item.id === amendment.orderId)
   if (!row || !canOperateOrder(row)) return
   const typeError = orderTypeError(amendment.type, { ...amendingSymbol.value, ...row })
   if (typeError) { ElMessage.error(typeError); return }
+  if (deferLunchOperation(row, 'amend', { ...amendment, referencePrice: amendingSymbol.value?.price }, new Date(), tradingTimeMode.value)) {
+    ElMessage.success('改单提交成功')
+    tab.value = 'orders'
+    return
+  }
   const isLimit = amendment.type !== 'market'
   const nextPrice = isLimit ? amendment.price : null
   const delta = amendment.quantityDelta
-  const referencePrice = nextPrice ?? amendingSymbol.value?.price ?? 0
+  const referencePrice = nextPrice ?? amendment.referencePrice ?? amendingSymbol.value?.price ?? 0
   const amendedBaseQuantity = delta > 0 ? row.quantity : amendment.quantity
   if (row.filledQuantity > 0) {
     // The filled portion is immutable; replace only the outstanding shares.
@@ -947,6 +971,7 @@ function publishOrderOperationMessage(row, operation, success) {
   })
 }
 function confirmCancelOrder() {
+  if (!canSubmitTradingOperation()) return
   if (!systemRunning.value) { cancelOrderVisible.value = false; return }
   const row = cancelingOrder.value
   if (!row) return
@@ -965,6 +990,7 @@ function confirmCancelOrder() {
 }
 function cancelInstruction(row, notify, fromInstructionTable = false) {
   if (!(fromInstructionTable ? canCancelInstruction(row) : canOperateOrder(row))) return false
+  if (deferLunchOperation(row, 'cancel', { notify, fromInstructionTable }, new Date(), tradingTimeMode.value)) return true
   row.canceledQuantity = cancelableQuantity(row)
   row.status = row.filledQuantity > 0 ? '部撤' : '撤单'
   row.instructionStatusCode = row.filledQuantity > 0 ? '5' : '6'
@@ -975,7 +1001,9 @@ function cancelInstruction(row, notify, fromInstructionTable = false) {
   if (notify) publishOrderOperationMessage({ ...row, quantity: row.canceledQuantity, filledQuantity: 0 }, '撤单', true)
   return true
 }
+function completeCancellation(row, { notify = true, fromInstructionTable = false } = {}) { cancelInstruction(row, notify, fromInstructionTable) }
 function confirmBulkCancel() {
+  if (!canSubmitTradingOperation()) return
   const requested = bulkCancelIds.value.length
   const canceled = bulkCancelIds.value.reduce((count, id) => {
     const row = demoOrders.value.find(item => item.id === id)
@@ -1005,6 +1033,7 @@ onBeforeUnmount(() => {
   transactionToastTimers.clear()
 })
 const recordTableContext = {
+  tradingTimeMode, setTradingTimeMode,
   money, formatPrice, readHistorySource,
   currencyFor, orderActivityHint, orderValueWithUnit, sharesWithUnit,
   assetUrl, variant, systemRunning, transactionToasts, messageIcon, allAccountsValue, workspace, selectedAccountIds,
