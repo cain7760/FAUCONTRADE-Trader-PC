@@ -196,7 +196,7 @@ useDialogShortcuts(isOpen, { confirm: submit, cancel: close })
       </OrderContextOverview>
     </template>
     <template #order>
-      <form class="order-form amend-order-form" @submit.prevent="submit">
+      <form class="order-form amend-order-form" novalidate @submit.prevent="submit">
         <section class="order-context-block">
           <div class="order-account-block"><div class="field-caption"><span>下单账户</span></div><div class="amend-readonly" :title="order.accountLabel || (account?.id || order.account) + ' - ' + (account?.name || '')">{{ order.accountLabel || (account?.id || order.account) + ' - ' + (account?.name || '') }}</div></div>
           <div class="order-account-block order-broker-account-block" :class="{ 'is-account-menu-open': brokerAccountMenuVisible }"><div class="field-caption"><span>内部上手方账户</span></div><el-select v-model="brokerAccountId" placeholder="请选择" :aria-label="`内部上手方账户 ${selectedBrokerAccount?.name || '--'}`" placement="bottom-end" :fallback-placements="['bottom-end', 'top-end']" :offset="12" popper-class="variant-popper order-account-popper" @visible-change="visible => { brokerAccountMenuVisible = visible; if (!visible) brokerAccountSearch = '' }"><template #header><div class="account-dropdown-search" @click.stop><el-input v-model="brokerAccountSearch" placeholder="搜索内部上手方账户" clearable /></div></template><el-option v-for="item in filteredBrokerAccounts" :key="item.id" :label="item.name" :value="item.id" /></el-select></div>
