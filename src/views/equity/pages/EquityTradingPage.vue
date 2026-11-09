@@ -1,4 +1,5 @@
 <script setup>
+import { version as solutionVersion } from '../../../../package.json'
 import { computed, inject, onBeforeUnmount, reactive, ref, watch } from 'vue'
 import { tradingContextKey } from '../tradingContext'
 import { ArrowDownBold, Search, View, Hide, Close } from '@element-plus/icons-vue'
@@ -269,7 +270,7 @@ onBeforeUnmount(() => stopPointerTracking?.())
       </section>
       <div v-if="tabDragPreview" class="tab-drag-preview" :style="{ left:`${tabDragPreview.x}px`, top:`${tabDragPreview.y}px` }">{{ tabDragPreview.label }} · 松开以悬浮</div>
     </div>
-    <footer class="variant-status"><span class="system-status"><i class="status-dot" :class="{ 'is-interrupted': !systemRunning }"/>{{ systemRunning ? '运行中' : '系统中断' }} · 演示环境<button type="button" class="system-status-toggle" @click="toggleSystemStatus">{{ systemRunning ? '切换为中断' : '恢复运行' }}</button><span class="demo-trading-time" role="group" aria-label="演示交易时间"><button type="button" class="system-status-toggle" :aria-pressed="tradingTimeMode === 'trading'" @click="setTradingTimeMode('trading')">交易时间</button><button type="button" class="system-status-toggle" :aria-pressed="tradingTimeMode === 'non-trading'" @click="setTradingTimeMode('non-trading')">非交易时间</button></span></span><span>行情：静态快照</span><span class="status-end">系统版本：方案 V0.2</span></footer>
+    <footer class="variant-status"><span class="system-status"><i class="status-dot" :class="{ 'is-interrupted': !systemRunning }"/>{{ systemRunning ? '运行中' : '系统中断' }} · 演示环境<button type="button" class="system-status-toggle" @click="toggleSystemStatus">{{ systemRunning ? '切换为中断' : '恢复运行' }}</button><span class="demo-trading-time" role="group" aria-label="演示交易时间"><button type="button" class="system-status-toggle" :aria-pressed="tradingTimeMode === 'trading'" @click="setTradingTimeMode('trading')">交易时间</button><button type="button" class="system-status-toggle" :aria-pressed="tradingTimeMode === 'non-trading'" @click="setTradingTimeMode('non-trading')">非交易时间</button></span></span><span>行情：静态快照</span><span class="status-end">方案版本：v{{ solutionVersion }}</span></footer>
     <ClosePositionDialog v-model="closePositionVisible" :position="closingPosition" :account="closingAccount" :broker-accounts="brokerAccounts" :paused="!systemRunning" @submit="acceptClosePosition" />
     <ChaseOrderDialog :paused="!systemRunning" v-model="chaseOrderVisible" :position="chasingPosition" :order="chasingOrder" :account="chasingAccount" :broker-accounts="brokerAccounts" @submit="acceptChaseOrder" />
     <AmendOrderDialog v-model="amendOrderVisible" :order="amendingOrder" :symbol="amendingSymbol" :account="amendingAccount" :broker-accounts="brokerAccounts" @submit="acceptAmendOrder" />

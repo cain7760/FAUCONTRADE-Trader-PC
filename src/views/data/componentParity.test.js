@@ -12,8 +12,10 @@ test('当日与历史实际使用同一套筛选及表格组件，历史页不�
     assert.ok(component.includes('class="filter-query"'))
     assert.ok(component.includes('ColumnConfigPopover'))
     assert.ok(component.includes('historical'))
-    assert.ok(component.includes('v-if="!historical" label="历史"'))
+    if (shared === 'OrderRecords.vue') assert.ok(component.includes('v-if="!historical" label="历史"'))
+    else assert.doesNotMatch(component, /label="历史"|openOrderHistory/)
   }
+  assert.doesNotMatch(read('../equity/components/PositionsTable.vue'), /label="历史"|openOrderHistory/)
   const page = read('./DataPage.vue')
   assert.doesNotMatch(page, /<el-table\s|<table\s|<thead|history-status--|order-fill-progress-track/)
   assert.doesNotMatch(page.split('<style scoped>')[1], /\.order-filters\s*\{|\.order-status|\.sort-heading|\.trading-table/)

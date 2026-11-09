@@ -219,7 +219,7 @@ const detailColumns = computed(() => {
   </div>
   <TradingTable ref="table" class="instruction-table orders-table original-fields" :data="sortedInstructions" row-key="id" :current-row-key="selectedId" highlight-current-row height="100%" :fit="false" empty-text="暂无指令" copyable-identifiers @current-change="row => { if (row) selectedId = row.id }" @selection-change="rows => selectedRows = rows">
     <el-table-column type="selection" width="40" fixed="left" class-name="instruction-selection-column" label-class-name="instruction-selection-column" :selectable="canCancel" />
-    <el-table-column v-for="[key, label, width] in visibleColumns" :key="key" :label="label" :width="width" :align="numericColumns.has(key) && key !== 'progress' ? 'right' : 'left'" :header-align="numericColumns.has(key) && key !== 'progress' ? 'right' : 'left'" :class-name="key === 'progress' ? 'instruction-progress-column' : key === 'frozenMargin' ? 'frozen-margin-column' : ''" :label-class-name="key === 'progress' ? 'instruction-progress-column' : key === 'frozenMargin' ? 'frozen-margin-column' : ''" show-overflow-tooltip>
+    <el-table-column v-for="[key, label, width] in visibleColumns" :key="key" :fixed="['code', 'name'].includes(key) ? 'left' : false" :label="label" :width="width" :align="numericColumns.has(key) && key !== 'progress' ? 'right' : 'left'" :header-align="numericColumns.has(key) && key !== 'progress' ? 'right' : 'left'" :class-name="key === 'progress' ? 'instruction-progress-column' : key === 'frozenMargin' ? 'frozen-margin-column' : ''" :label-class-name="key === 'progress' ? 'instruction-progress-column' : key === 'frozenMargin' ? 'frozen-margin-column' : ''" show-overflow-tooltip>
       <template v-if="numericColumns.has(key)" #header><SortHeader :label="label" numeric :direction="sortState.key === key ? sortState.direction : null" @sort="toggleSort(key)" /></template>
       <template #default="{ row }">
         <span v-if="key === 'progress'" class="instruction-progress">
@@ -263,6 +263,7 @@ const detailColumns = computed(() => {
 .variants-app .instruction-child-tabs button span{margin-left:3px;color:#bb984a;font-size:12px}
 .variants-app .instruction-table .instruction-selection-column .el-checkbox{transform:translateX(6px)}
 .variants-app .instruction-table .instruction-selection-column .cell{overflow:visible}
+.variants-app .positions-pane .instruction-table th.el-table-fixed-column--left{z-index:5}
 .variants-app .instruction-table .order-status{max-width:100%}
 .variants-app .positions-pane .instruction-table th.el-table__cell.frozen-margin-column .cell,.variants-app .positions-pane .instruction-table td.el-table__cell.frozen-margin-column .cell{padding-right:8px}
 .variants-app .positions-pane .instruction-table th.el-table__cell.instruction-progress-column .cell,.variants-app .positions-pane .instruction-table td.el-table__cell.instruction-progress-column .cell{padding-left:16px}
