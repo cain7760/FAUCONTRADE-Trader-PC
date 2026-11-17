@@ -1,5 +1,5 @@
 import { executionDurationMinutes } from '../../domain/orders/executionSchedule.js'
-import { isValidPovDuration, povParametersError, povOrderTimeError, resolvePovExecutionTime } from '../../domain/orders/povSchedule.js'
+import { isValidPovDuration, povParametersError, povOrderTimeError, resolvePovExecutionTime, povExecutionTimeError, povParticipationError } from '../../domain/orders/povSchedule.js'
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
@@ -12,7 +12,7 @@ import { defaultAlgorithmForMarket } from './orderAlgorithmDefaults.js'
 function setup(file, props, events = [], environment = {}) {
   const { descriptor } = parse(readFileSync(new URL(file, import.meta.url), 'utf8'))
   const script = compileScript(descriptor, { id: 'market-rules-test' }).content
-  const imports = { tradingTimeErrorKey: 'faucon-demo-trading-time-error', isValidPovDuration, povParametersError, povOrderTimeError: order => povOrderTimeError(order, new Date('2026-11-12T10:00:00+08:00')), resolvePovExecutionTime, executionDurationMinutes, ExecutionTimeRange: {}, ExecutionAlgorithmTabs: {}, PovDeadline: {}, ...vue, ...marketRules, defaultAlgorithmForMarket, ArrowDown: {}, ArrowUp: {}, CircleClose: {}, InfoFilled: {},
+  const imports = { povParticipationError, povExecutionTimeError: (symbol, range) => povExecutionTimeError(symbol, range, new Date('2026-11-12T10:00:00+08:00')), tradingTimeErrorKey: 'faucon-demo-trading-time-error', isValidPovDuration, povParametersError: (symbol, params, _now, required) => povParametersError(symbol, params, new Date('2026-11-12T10:00:00+08:00'), required), povOrderTimeError: order => povOrderTimeError(order, new Date('2026-11-12T10:00:00+08:00')), resolvePovExecutionTime, executionDurationMinutes, ExecutionTimeRange: {}, ExecutionAlgorithmTabs: {}, PovDeadline: {}, ...vue, ...marketRules, defaultAlgorithmForMarket, ArrowDown: {}, ArrowUp: {}, CircleClose: {}, InfoFilled: {},
     ElMessage: { error: message => events.push(['error', message]), success() {} },
     money: String, number: String, formatPrice: String, globalTradingConfig: {}, useDialogShortcuts() {},
     BaseDialog: {}, PositionOrderDialog: {}, OrderContextOverview: {}, inject: (_key, fallback) => fallback, ...environment }
