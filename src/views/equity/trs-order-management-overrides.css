@@ -1546,7 +1546,7 @@
 .trader-center-layout .el-input-number .el-input__inner,
 .trader-center-layout .trs-split-validation strong,
 .trader-center-layout .asset-number {
-  font-family: 'D-DIN Exp', 'DIN Alternate', 'Arial Narrow', sans-serif;
+  font-family:var(--ft-font-numeric);
   font-variant-numeric: tabular-nums;
 }
 
@@ -1858,7 +1858,7 @@
 
 .trs-split-details > header strong {
   color: #cbd2dc;
-  font-family: 'D-DIN Exp', 'DIN Alternate', 'Arial Narrow', sans-serif;
+  font-family:var(--ft-font-numeric);
   font-weight: 500;
   font-variant-numeric: tabular-nums;
 }

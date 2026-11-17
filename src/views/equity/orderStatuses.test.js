@@ -7,6 +7,7 @@ import { instructionStatusLabel } from './instructionStatus.js'
 const { descriptor } = parse(readFileSync(new URL('./EquityVariants.vue', import.meta.url), 'utf8'))
 const ast = compileScript(descriptor, { id: 'order-status-test' }).scriptSetupAst
 function evaluate(name, context = {}) {
+  context = { tradingTimeMode: { value: 'trading' }, canSubmitTradingOperation: () => true, deferLunchOperation: () => false, ...context }
   const node = ast.find(item => item.type === 'FunctionDeclaration' ? item.id.name === name
     : item.type === 'VariableDeclaration' && item.declarations.some(declaration => declaration.id.name === name))
   assert.ok(node, name)

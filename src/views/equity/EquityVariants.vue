@@ -3,8 +3,8 @@ import { computed, nextTick, onBeforeUnmount, onMounted, provide, ref, watch } f
 import { ElMessage } from 'element-plus'
 import { CircleCheck, CircleClose, Close, EditPen, More } from '@element-plus/icons-vue'
 import SettingsMenuIcon from '../../SettingsMenuIcon.vue'
-import { accounts, brokerAccounts } from './fixtures'
-import { marketInstruments, variantRows, variants, money, signedMoney, number, price as formatPrice } from './variantData'
+import { accounts, accountTypes, brokerAccounts } from './fixtures'
+import { marketInstruments, variantRows, zeroAvailablePosition, variants, money, signedMoney, number, price as formatPrice } from './variantData'
 import { channelSources } from './channelSource'
 import { instructionStatusLabel } from './instructionStatus'
 import { columnOptionsFor } from './tableFieldDefinitions'
@@ -113,12 +113,13 @@ const allAccountsValue = '__ALL_ACCOUNTS__'
 // 演示账户概要：不覆盖下单风控使用的 account.cash；汇率仅用于概要折算，并非实时行情。
 const demoAvailableCnyByAccount = Object.freeze({ TZS_T0: 1245527941.41, TZS_T1: 620800, TZS_T2: 740000, TZS_T3: 880000, TZS_T4: 910000 })
 const demoFxToCny = Object.freeze({ CNY: 1, HKD: 0.92, USD: 7.10 })
-const workspace = ref(null), accountId = ref('TZS_T0'), selectedAccountIds = ref(['TZS_T0']), previousAccountSelection = ref(['TZS_T0']), query = ref(''), positionType = ref('ALL')
+const workspace = ref(null), accountId = ref('TZS_T0'), selectedAccountIds = ref([allAccountsValue]), previousAccountSelection = ref([allAccountsValue]), query = ref(''), positionType = ref('ALL'), positionAccount = ref('ALL'), positionAccountType = ref('ALL')
 const globalAccountSearch = ref('')
 const assetsVisible = ref(true), assetsCollapsed = ref(false)
 const tab = ref('positions'), selectedCode = ref('000001'), table = ref(null), quote = ref(null), ticketResetKey = ref(0)
 const ticketContext = ref(null)
 const closePositionVisible = ref(false), closingPosition = ref(null)
+const closePositionErrorVisible = ref(false)
 const chaseOrderVisible = ref(false), chasingPosition = ref(null), chasingOrder = ref(null), chasingAccountId = ref(null)
 const amendOrderVisible = ref(false), amendingOrder = ref(null)
 const cancelOrderVisible = ref(false), cancelingOrder = ref(null)
@@ -230,7 +231,7 @@ watch(orderFilterBar, bar => {
   }
 }, { flush: 'post' })
 onBeforeUnmount(() => orderFilterObserver?.disconnect())
-const appliedPositionFilters = ref({ query: '', positionType: 'ALL' })
+const appliedPositionFilters = ref({ query: '', positionType: 'ALL', account: 'ALL', accountType: 'ALL' })
 const appliedOrderFilters = ref({ orderNo: '', symbol: '', side: 'ALL', openClose: 'ALL', orderType: 'ALL', status: [] })
 const tradeFilters = ref({ symbol: '', side: 'ALL', openClose: 'ALL', orderType: 'ALL' })
 const appliedTradeFilters = ref({ symbol: '', side: 'ALL', openClose: 'ALL', orderType: 'ALL' })
@@ -277,7 +278,10 @@ function accountPosition(position, accountIndex) {
     floatingProfit: position.floatingProfit * factor, dailyRealizedProfit: position.dailyRealizedProfit * factor, totalProfit: position.totalProfit * factor,
   }
 }
-const instruments = computed(() => variantRows.map(p => accountPosition(p, Math.max(0, accounts.findIndex(item => item.id === accountId.value)))))
+const instruments = computed(() => {
+  const rows = variantRows.map(p => accountPosition(p, Math.max(0, accounts.findIndex(item => item.id === accountId.value))))
+  return accountId.value === zeroAvailablePosition.account ? [...rows, zeroAvailablePosition] : rows
+})
 const emptySelected = { code: '', market: '', name: '请选择下单标的', price: null, cost: null, change: 0, available: 0 }
 const selected = computed(() => instruments.value.find(p => p.code === selectedCode.value) || marketInstruments.find(p => p.code === selectedCode.value) || emptySelected)
 const { traderPrimaryMenu, activeTraderPrimary, activeTraderSecondary, traderSecondaryCollapsed, activeTraderGroup, selectTraderPrimary, trsOrderTicketVisible, trsOrderRequest, trsTicketSymbol, trsTicketInstruments, openTrsOrderTicket, acceptTrsOrder } = useTraderCenterSession({ selected, acceptOrder })
@@ -286,6 +290,7 @@ const allPositionRows = computed(() => {
     const brokerAccount = brokerAccounts[index % brokerAccounts.length]
     return { ...accountPosition(position, index), brokerAccountId: brokerAccount.id, brokerAccountLabel: brokerAccount.name }
   }))
+  baseRows.push({ ...zeroAvailablePosition, brokerAccountId: brokerAccounts[0].id, brokerAccountLabel: brokerAccounts[0].name })
   const syncedKeys = new Set(syncedHtPositions.value.map(row => `${row.account}:${row.code}`))
   return [...syncedHtPositions.value, ...baseRows.filter(row => !syncedKeys.has(`${row.account}:${row.code}`))]
 })
@@ -318,7 +323,7 @@ const assetSummaryMetrics = computed(() => {
     { key: 'floatingProfit', label: '浮动盈亏', value: floatingProfit, tone: floatingProfit > 0 ? 'is-profit' : floatingProfit < 0 ? 'is-loss' : '' },
   ]
 })
-function filterPositionRows(rows) { return rows.filter(p => (!appliedPositionFilters.value.query || `${p.code}${p.name}`.includes(appliedPositionFilters.value.query.trim())) && (appliedPositionFilters.value.positionType === 'ALL' || p.direction === appliedPositionFilters.value.positionType)) }
+function filterPositionRows(rows) { return rows.filter(p => (!appliedPositionFilters.value.query || `${p.code}${p.name}`.includes(appliedPositionFilters.value.query.trim())) && (appliedPositionFilters.value.positionType === 'ALL' || p.direction === appliedPositionFilters.value.positionType) && (appliedPositionFilters.value.account === 'ALL' || p.account === appliedPositionFilters.value.account) && (appliedPositionFilters.value.accountType === 'ALL' || accountTypeLabel(p.account) === appliedPositionFilters.value.accountType)) }
 const filtered = computed(() => filterPositionRows(allRows.value))
 function sortPositionRows(rows) {
   const { prop, direction } = sortState.value
@@ -510,6 +515,7 @@ function enrichOrder(order) {
   }
 }
 function accountLabel(id) { const item = accounts.find(value => value.id === id); return item ? `${item.id} - ${item.name}` : id || '--' }
+function accountTypeLabel(id) { const type = accounts.find(value => value.id === id)?.accountType; return accountTypes.includes(type) ? type : '--' }
 function marketLabel(marketValue) { return marketValue === 'HK' ? '港股' : 'A股' }
 function timeLabel(value) { return value ? String(value).slice(-8) : '--' }
 function publishOrderActivityMessage(row, unread = true) {
@@ -592,12 +598,12 @@ function triggerDemoTransactionToast() {
   publishTransactionMessage({ name: '平安银行', code: '000001', status: '买入订单全部成交', quantity: 900, price: 11.78, title: '订单已全部成交' })
 }
 function toggleAssetsVisible() { assetsVisible.value = !assetsVisible.value; if (assetsCollapsed.value) assetsCollapsed.value = false }
-function applyFilters() { appliedPositionFilters.value = { query: query.value, positionType: positionType.value }; table.value?.setScrollTop?.(0) }
+function applyFilters() { appliedPositionFilters.value = { query: query.value, positionType: positionType.value, account: positionAccount.value, accountType: positionAccountType.value }; table.value?.setScrollTop?.(0) }
 function applyOrderFilters() { appliedOrderFilters.value = { ...orderFilters.value, status: [...orderFilters.value.status] }; orderSortState.value = { prop: null, direction: null } }
 function clearOrderFilters() { orderFilters.value = { orderNo: '', symbol: '', side: 'ALL', openClose: 'ALL', orderType: 'ALL', status: [] }; applyOrderFilters() }
 function applyTradeFilters() { appliedTradeFilters.value = { ...tradeFilters.value }; tradeSortState.value = { prop: null, direction: null } }
 function clearTradeFilters() { tradeFilters.value = { symbol: '', side: 'ALL', openClose: 'ALL', orderType: 'ALL' }; applyTradeFilters() }
-function clearFilters() { query.value = ''; positionType.value = 'ALL'; sortState.value = { prop: null, direction: null }; table.value?.clearFilter(); applyFilters() }
+function clearFilters() { query.value = ''; positionType.value = 'ALL'; positionAccount.value = 'ALL'; positionAccountType.value = 'ALL'; sortState.value = { prop: null, direction: null }; table.value?.clearFilter(); applyFilters() }
 function downloadCsv(filename, header, records) {
   const csv = [header, ...records].map(record => record.map(value => `"${String(value).replaceAll('"', '""')}"`).join(',')).join('\n')
   const link = document.createElement('a')
@@ -607,8 +613,8 @@ function downloadCsv(filename, header, records) {
   URL.revokeObjectURL(link.href)
 }
 function exportPositions(rows = sortedRows.value) {
-  const header = ['多空方向', '证券代码', '证券名称', '持仓均价', '最新价', '期初数量', '持仓数量', '可用数量', '市值', '占用保证金', '保证金率', '总盈亏', '实现盈亏', '浮动盈亏', '下单账户', '市场', '币种', '订单类型', '执行算法', '下单备注', '交易员备注']
-  const records = rows.map(row => [row.direction, `${row.code}.${row.market}`, row.name, formatPrice(row.cost, row.market), formatPrice(row.price, row.market), number(row.opening), number(row.qty), number(row.available), money(row.value), money(row.marginOccupied), `${row.marginRate}%`, signedMoney(row.totalProfit), signedMoney(row.dailyRealizedProfit), signedMoney(row.floatingProfit), accountLabel(row.account), marketLabel(row.market), currencyFor(row), row.orderType || '--', row.algorithm || '--', row.orderRemark || '--', row.traderRemark || '--'])
+  const header = ['多空方向', '证券代码', '证券名称', '持仓均价', '最新价', '期初数量', '持仓数量', '可用数量', '市值', '占用保证金', '保证金率', '总盈亏', '实现盈亏', '浮动盈亏', '下单账户', '账户类型', '市场', '币种', '订单类型', '执行算法', '下单备注', '交易员备注']
+  const records = rows.map(row => [row.direction, `${row.code}.${row.market}`, row.name, formatPrice(row.cost, row.market), formatPrice(row.price, row.market), number(row.opening), number(row.qty), number(row.available), money(row.value), money(row.marginOccupied), `${row.marginRate}%`, signedMoney(row.totalProfit), signedMoney(row.dailyRealizedProfit), signedMoney(row.floatingProfit), accountLabel(row.account), accountTypeLabel(row.account), marketLabel(row.market), currencyFor(row), row.orderType || '--', row.algorithm || '--', row.orderRemark || '--', row.traderRemark || '--'])
   downloadCsv('持仓列表.csv', header, records)
 }
 function exportOrders(rows = orders.value) {
@@ -768,7 +774,18 @@ function loadPositionIntoTicket(row, column) {
   collapsed.value = false
   ticketResetKey.value += 1
 }
-function openClosePosition(row) { if (!systemRunning.value) return; closingPosition.value = row; closePositionVisible.value = true }
+function openClosePosition(row) {
+  if (!systemRunning.value) return
+  if (!(Number(row?.available) > 0)) {
+    closePositionVisible.value = false
+    closingPosition.value = null
+    closePositionErrorVisible.value = true
+    return
+  }
+  closePositionErrorVisible.value = false
+  closingPosition.value = row
+  closePositionVisible.value = true
+}
 function openChaseOrder(row) {
   if (!systemRunning.value) return
   const position = allPositionRows.value.find(item => item.code === row.code && item.account === row.account) || variantRows.find(item => item.code === row.code)
@@ -1044,12 +1061,12 @@ const recordTableContext = {
   start, startResize, isTicketLayoutModified, account, closingAccount, chasingAccount, amendingAccount, amendingSymbol,
   effectiveAccountIds, filteredGlobalAccounts, instruments, selected, allRows, assetSummaryMetrics, orders, trades, sortedTrades, floatStyle,
   positionRowsForAccounts, ordersForAccounts, tradesForAccounts, sortOrderRows, sortTradeRows,
-  resetTicketLayout, toggleSystemStatus, dismissTransactionToast, accountLabel, marketLabel, tradeStatusLabel, tradeStatusVisual, toggleAssetsVisible,
+  resetTicketLayout, toggleSystemStatus, dismissTransactionToast, accountLabel, accountTypeLabel, marketLabel, tradeStatusLabel, tradeStatusVisual, toggleAssetsVisible,
   updateGlobalAccountSelection, handleGlobalAccountVisible, selectTicketAccount, assetAmountParts, acceptOrder, acceptClosePosition, acceptChaseOrder,
   cancelableQuantity, canOperateOrder, canCancelInstruction, canChaseOrder, canAmendOrder, canConvertToManual, orderActionLabel, openOrderChase, openCancelOrder, openCancelInstruction,
   openBulkCancel, openConvertToManual, confirmConvertToManual, openAmendOrder, acceptAmendOrder, confirmCancelOrder, confirmBulkCancel, traderPrimaryMenu,
   activeTraderPrimary, activeTraderSecondary, traderSecondaryCollapsed, activeTraderGroup, selectTraderPrimary, trsOrderTicketVisible, trsOrderRequest, trsTicketSymbol,
-  trsTicketInstruments, openTrsPoolExport, openTrsOrderTicket, acceptTrsOrder, recordHtDealInEquity, query, positionType, table,
+  trsTicketInstruments, openTrsPoolExport, openTrsOrderTicket, acceptTrsOrder, recordHtDealInEquity, query, positionType, positionAccount, positionAccountType, accountTypes, table,
   tableRefreshKey, sortState, positionColumnDefaults, visibleColumnKeys, columnOptions, filtered, sortedRows, applyFilters,
   clearFilters, confirmExport, refreshTable, toggleSort, loadPositionIntoTicket, openClosePosition, openChaseOrder, openOrderHistory,
   orderStatusOptions, orderFilters, orderFilterBar, visibleOrderFilterCount, orderSortState, orderColumnDefaults, orderVisibleColumnKeys, orderColumnOptions,
@@ -1087,6 +1104,7 @@ provide(tradingContextKey, recordTableContext)
       </div>
     </BaseDialog>
     <BaseDialog v-model="emergencyMessage" width="420px" align-center class="emergency-message-dialog" title="紧急通知"><section v-if="emergencyMessage"><h3>{{ emergencyMessage.title }}</h3><p>{{ emergencyMessage.content }}</p></section><template #footer><el-button type="primary" @click="emergencyMessage=null">我知道了</el-button></template></BaseDialog>
+    <BaseDialog v-model="closePositionErrorVisible" width="420px" align-center title="操作失败"><p>当前标的无可用持仓。</p><template #footer><el-button type="primary" @click="closePositionErrorVisible=false">知道了</el-button></template></BaseDialog>
     <BaseDialog v-model="settingsVisible" class="settings-dialog equity-settings-dialog" width="700px" :show-close="false" :close-on-click-modal="true" :close-on-press-escape="false" destroy-on-close>
       <template #header><div class="settings-title"><div v-if="settingsDetail === 'password'" class="settings-breadcrumb" aria-label="当前位置"><button type="button" @click="closePasswordDialog">系统设置</button><span>/</span><h2>修改密码</h2></div><h2 v-else>系统设置</h2><button class="settings-close" type="button" aria-label="关闭系统设置" @click="closeSettings"><el-icon><Close /></el-icon></button></div></template>
       <section v-if="settingsDetail === 'password'" class="settings-password-view">

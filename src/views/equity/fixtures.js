@@ -1,7 +1,11 @@
 // 全部为方案演示数据；各数量字段使用同一单账户口径。
+export const accountTypes = ['VIC账号', '客户账号', '内部上手账号', '对冲账号', '内部对冲账号']
 export const accounts = [
-  { id: 'TZS_T0', name: '自营一号', email: 'kevin.zhang@faucontrade.com', cash: 945527.41, frameworks: [{ id: 'price-preference', name: '价格偏好' }, { id: 'liquidity-priority', name: '流动性优先' }] },
-  { id: 'TZS_T1', name: '自营二号', email: 'trader.two@faucontrade.com', cash: 620800, frameworks: [{ id: 'risk-hedge', name: '风险对冲' }, { id: 'return-enhancement', name: '收益增强' }] },
+  { id: 'TZS_T0', name: '自营一号', accountType: 'VIC账号', email: 'kevin.zhang@faucontrade.com', cash: 945527.41, frameworks: [{ id: 'price-preference', name: '价格偏好' }, { id: 'liquidity-priority', name: '流动性优先' }] },
+  { id: 'TZS_T1', name: '自营二号', accountType: '内部对冲账号', email: 'trader.two@faucontrade.com', cash: 620800, frameworks: [{ id: 'risk-hedge', name: '风险对冲' }, { id: 'return-enhancement', name: '收益增强' }] },
+  { id: 'TZS_T2', name: '客户演示户', accountType: '客户账号', email: 'customer.demo@faucontrade.com', cash: 740000, frameworks: [{ id: 'price-preference', name: '价格偏好' }] },
+  { id: 'TZS_T3', name: '上手演示户', accountType: '内部上手账号', email: 'upstream.demo@faucontrade.com', cash: 880000, frameworks: [{ id: 'liquidity-priority', name: '流动性优先' }] },
+  { id: 'TZS_T4', name: '对冲演示户', accountType: '对冲账号', email: 'hedge.demo@faucontrade.com', cash: 910000, frameworks: [{ id: 'risk-hedge', name: '风险对冲' }] },
 ]
 export const brokerAccounts = [
   { id: 'BROKER_A_DEMO', name: '券商 A 自营户·演示' },

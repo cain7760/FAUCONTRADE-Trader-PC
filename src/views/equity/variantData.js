@@ -77,6 +77,19 @@ export const variantRows = positions.map((p, i) => {
   }
 })
 
+// 独立的冻结持仓样本，不参与现有订单种子的循环取值。
+const zeroAvailableSeed = { ...hongKongDemoInstruments[0], opening: 1000, pendingSell: 1000 }
+const zeroAvailableMetrics = calculatePositionMetrics(zeroAvailableSeed)
+const zeroAvailableValue = cents(zeroAvailableSeed.price) * zeroAvailableMetrics.qty / 100
+export const zeroAvailablePosition = {
+  ...zeroAvailableSeed, ...zeroAvailableMetrics,
+  id: 'T0-zero-available', account: 'TZS_T0', direction: '多',
+  executionType: 'lowTouch', orderType: '系统单', algorithm: 'DMA',
+  orderRemark: '', traderRemark: '', value: zeroAvailableValue, valueWan: zeroAvailableValue / 10000,
+  marginRate: 10, marginOccupied: zeroAvailableMetrics.qty * cents(zeroAvailableSeed.cost) * 10 / 10000,
+  floatingProfit: 0, totalProfit: 0, positionDate: '2026-09-18',
+}
+
 // 下单检索使用独立的全市场演示标的池，不能从当前持仓列表推导。
 const marketLabels = ['华远科技', '新城制造', '中原能源', '海岳医药', '智联电子', '云帆软件', '国泰材料', '远景通信', '华夏消费', '深港物流']
 export const marketInstruments = [
