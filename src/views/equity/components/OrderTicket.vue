@@ -135,7 +135,7 @@ const sourceAccountLabel = computed(() => props.customerOrderReadonly ? props.in
 const sourceFrameworkName = computed(() => props.customerOrderReadonly ? props.initialOrder?.frameworkName || '' : selectedFramework.value?.name || '')
 const hasInvalidPovParameters = (hours, minutes, participation) => !isValidPovDuration(hours, minutes)
   || Number(participation) <= 0 || Number(participation) > 25
-const povParameterError = computed(() => algorithm.value === 'POV' && hasInvalidPovParameters(povHours.value, povMinutes.value, povParticipation.value))
+const povParameterError = computed(() => ['POV', 'TWAP', 'VWAP'].includes(algorithm.value) && hasInvalidPovParameters(povHours.value, povMinutes.value, povParticipation.value))
 const draftPovParameterError = computed(() => draftAlgorithm.value === 'DMA' ? '' : povParametersError(ticketSymbol.value, { executionTime: draftPovExecutionTime.value, participation: draftPovParticipation.value }, algorithmConfigNow.value, true))
 const algorithmValid = computed(() => !povParameterError.value)
 const usesPercentage = computed(() => executionType.value === 'lowTouch' && quantityMode.value === 'percentage')

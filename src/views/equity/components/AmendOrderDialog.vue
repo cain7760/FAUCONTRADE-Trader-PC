@@ -96,7 +96,7 @@ const changed = computed(() => {
     || side.value !== order.side || orderType.value !== (order.type === 'market' ? 'market' : 'limit')
     || (!isMarket.value && Number(price.value) !== Number(order.price))
     || quantityDelta.value !== 0 || (usesAmount.value ? Number(amount.value) !== Number(order.inputAmount) : order.inputAmount != null)
-    || algorithm.value !== (order.algorithm || 'DMA')
+    || algorithm.value !== (algorithmDisplay(order.algorithm) || 'DMA')
     || (['POV', 'TWAP', 'VWAP'].includes(algorithm.value) && JSON.stringify([Number(povHours.value), Number(povMinutes.value), Number(povParticipation.value)])
       !== JSON.stringify([Number(order.algorithmParams?.hours ?? 1), Number(order.algorithmParams?.minutes ?? 0), Number(order.algorithmParams?.participation ?? 10)]))
     || note.value.trim() !== (order.orderRemark || order.note || '').trim()
@@ -138,7 +138,7 @@ watch(() => props.order, order => {
   amount.value = order?.inputAmount ?? (Number(order?.quantity) || 0) * (Number(order?.price) || 0)
   unit.value = 'shares'
   amountUnit.value = 'yuan'
-  algorithm.value = order?.algorithm || 'DMA'
+  algorithm.value = algorithmDisplay(order?.algorithm) || 'DMA'
   povExecutionTime.value = order?.algorithmParams?.executionTime?.slice() || null
   povHours.value = order?.algorithmParams?.hours ?? 1
   povMinutes.value = order?.algorithmParams?.minutes ?? 0
