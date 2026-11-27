@@ -1,5 +1,7 @@
 <script setup>
-import { ref } from 'vue'
+import { nextTick, ref } from 'vue'
+import { ElMessage } from 'element-plus'
+import PasswordChangeForm from '../../components/auth/PasswordChangeForm.vue'
 import { View, Hide, User, Lock, ArrowDown } from '@element-plus/icons-vue'
 import { clearRememberedDemoAccounts, enterDemoSession, readLastRememberedDemoLogin, readRememberedDemoAccounts, readRememberedDemoCredentials, readRememberPassword } from '../../domain/auth/demoSession.js'
 import falconTrader from '../../assets/login/falcon-trader-head-simplified.png'
@@ -11,13 +13,17 @@ const lastLogin = readRememberPassword() ? readLastRememberedDemoLogin() : { use
 const values = ref({ ...lastLogin, rememberPassword: readRememberPassword() })
 const submitting = ref(false)
 const errorMessage = ref('')
-const resetHelpVisible = ref(false)
+const passwordResetActive = ref(false)
+const passwordResetForm = ref(null)
+const loginAccess = ref(null)
+const loginTitle = ref(null)
+const forgotPassword = ref(null)
 const passwordVisible = ref(false)
 const rememberedAccounts = ref(readRememberedDemoAccounts())
 const selectedAccount = ref(false)
 const rules = {
-  username: [{ validator: (_rule, value, callback) => callback(value.trim() ? undefined : new Error('请输入用户名')), trigger: 'blur' }],
-  password: [{ required: true, message: '请输入密码', trigger: 'blur' }],
+  username: [{ validator: (_rule, value, callback) => callback(value.trim() ? undefined : new Error('请输入用户名')) }],
+  password: [{ required: true, message: '请输入密码' }],
 }
 
 function selectAccount(command) {
@@ -40,9 +46,23 @@ function onUsernameInput() {
   selectedAccount.value = false
 }
 
+async function setPasswordResetActive(active) {
+  passwordResetActive.value = active
+  await nextTick()
+  loginAccess.value?.scrollTo(0, 0)
+  const focusTarget = active ? loginTitle : forgotPassword
+  focusTarget.value?.focus({ preventScroll: true })
+}
+
+function finishPasswordReset() {
+  setPasswordResetActive(false)
+  values.value.password = ''
+  ElMessage.success('演示密码重置成功。')
+}
+
 async function submitLogin() {
   if (submitting.value) return
-  if (!await form.value.validate().catch(() => false)) return
+  if (!await form.value.validate().catch(() => false) || passwordResetActive.value) return
   errorMessage.value = ''
   submitting.value = true
   try {
@@ -62,21 +82,27 @@ async function submitLogin() {
       <div class="login-visual" aria-hidden="true">
         <img class="login-brand-art" :src="falconTrader" alt="" width="1254" height="1254" fetchpriority="high" />
       </div>
-      <section class="login-access" aria-labelledby="login-title">
+      <section ref="loginAccess" class="login-access" aria-labelledby="login-title" @keydown.esc="passwordResetActive && setPasswordResetActive(false)">
         <div class="login-form-content">
           <header class="login-heading">
-            <div class="login-brand-row">
+            <div v-if="!passwordResetActive" class="login-brand-row">
               <img class="login-logo" :src="logo" alt="FAUCON TRADE" width="132" height="34" />
             </div>
             <div class="login-heading-title">
-              <h1 id="login-title">欢迎登录</h1>
+              <h1 id="login-title" ref="loginTitle" tabindex="-1">{{ passwordResetActive ? '忘记密码' : '欢迎登录' }}</h1>
             </div>
-            <p class="login-intro">登录猎盈交易端，继续把握每一个交易机会。</p>
+            <p v-if="!passwordResetActive" class="login-intro">登录猎盈交易端，继续把握每一个交易机会。</p>
           </header>
 
-          <el-form ref="form" :model="values" :rules="rules" label-position="top" hide-required-asterisk class="login-form" :disabled="submitting" novalidate @submit.prevent="submitLogin">
+          <template v-if="passwordResetActive">
+            <PasswordChangeForm ref="passwordResetForm" class="login-recovery-form" recovery @success="finishPasswordReset" />
+            <el-button class="login-submit" type="primary" native-type="button" @click="passwordResetForm?.submit()">确认重置</el-button>
+            <button type="button" class="login-reset-link login-back-link" @click="setPasswordResetActive(false)">返回登录</button>
+          </template>
+
+          <el-form v-show="!passwordResetActive" ref="form" :model="values" :rules="rules" label-position="top" hide-required-asterisk class="login-form" :disabled="submitting" novalidate @submit.prevent="submitLogin">
             <el-form-item label="用户名" prop="username" for="login-username">
-              <el-input id="login-username" v-model="values.username" name="username" placeholder="请输入用户名" autocomplete="username" :maxlength="128" :spellcheck="false" autocapitalize="none" :prefix-icon="User" @input="onUsernameInput">
+              <el-input id="login-username" :validate-event="false" v-model="values.username" name="username" placeholder="请输入用户名" autocomplete="username" :maxlength="128" :spellcheck="false" autocapitalize="none" :prefix-icon="User" @input="onUsernameInput">
                 <template v-if="rememberedAccounts.length" #suffix>
                   <el-dropdown trigger="click" placement="bottom-end" popper-class="login-account-popper" @command="selectAccount">
                     <button type="button" class="login-account-switch" aria-label="切换已保存账号">{{ selectedAccount ? '切换' : '切换账号' }} <el-icon><ArrowDown /></el-icon></button>
@@ -89,20 +115,19 @@ async function submitLogin() {
               </el-input>
             </el-form-item>
             <el-form-item label="密码" prop="password" for="login-password">
-              <el-input id="login-password" v-model="values.password" name="password" placeholder="请输入密码" :type="passwordVisible ? 'text' : 'password'" :autocomplete="values.rememberPassword ? 'current-password' : 'off'" :maxlength="256" :prefix-icon="Lock">
+              <el-input id="login-password" :validate-event="false" v-model="values.password" name="password" placeholder="请输入密码" :type="passwordVisible ? 'text' : 'password'" :autocomplete="values.rememberPassword ? 'current-password' : 'off'" :maxlength="256" :prefix-icon="Lock">
                 <template #suffix><button type="button" class="login-password-toggle" :aria-label="passwordVisible ? '隐藏密码' : '显示密码'" :aria-pressed="passwordVisible" :disabled="submitting" @click="passwordVisible = !passwordVisible"><el-icon><Hide v-if="passwordVisible" /><View v-else /></el-icon></button></template>
               </el-input>
             </el-form-item>
 
             <div class="login-options">
               <el-checkbox v-model="values.rememberPassword">记住密码</el-checkbox>
-              <button type="button" class="login-reset-link" :aria-expanded="resetHelpVisible" aria-controls="login-reset-help" @click="resetHelpVisible = !resetHelpVisible">忘记密码？</button>
+              <button ref="forgotPassword" type="button" class="login-reset-link" :disabled="submitting" @click="setPasswordResetActive(true)">忘记密码？</button>
             </div>
-            <p v-if="resetHelpVisible" id="login-reset-help" class="login-reset-help" role="status">请联系您的账户管理员重置密码。</p>
             <p v-if="errorMessage" class="login-submit-error" role="alert">{{ errorMessage }}</p>
             <el-button class="login-submit" type="primary" native-type="submit" :loading="submitting">{{ submitting ? '正在登录' : '登录' }}</el-button>
           </el-form>
-          <p class="login-demo-note">demo环境，随意输入用户名与密码即可登录</p>
+          <p v-if="!passwordResetActive" class="login-demo-note">demo环境，随意输入用户名与密码即可登录</p>
         </div>
       </section>
     </div>
@@ -145,6 +170,7 @@ async function submitLogin() {
   display: grid;
   /* 原 52/48 双栏中，表单区域缩窄 20%，图像区域保留原有宽度。 */
   grid-template-columns: minmax(0, 52fr) minmax(0, 38.4fr);
+  grid-template-rows: minmax(0, 1fr);
   width: min(1012px, 100%);
   aspect-ratio: 1.61803398875 / 1;
   overflow: hidden;
@@ -157,10 +183,13 @@ async function submitLogin() {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  justify-content: center;
   min-width: 0;
-  padding: 48px 56px;
+  overflow-y: auto;
+  padding: 80px 56px 24px;
 }
+.login-access .login-recovery-form { max-width: none; }
+.login-recovery-form :deep(:is(.el-input__wrapper, .password-code-action)) { height: 40px; }
+.login-back-link { display: block; margin: 12px auto 0; }
 .login-brand-row { margin-bottom: 28px; }
 .login-logo {
   display: block;
@@ -199,7 +228,9 @@ async function submitLogin() {
   object-position: center;
 }
 .login-form :deep(.el-form-item) { margin-bottom: 28px; }
-.login-form :deep(.el-form-item__label) { height: auto; padding: 0; margin-bottom: 10px; font-size: 14px; line-height: 20px; color: var(--el-text-color-regular); }
+.login-form :deep(.el-form-item__label),
+.login-recovery-form :deep(.password-field > label) { font-size: 14px; }
+.login-form :deep(.el-form-item__label) { height: auto; padding: 0; margin-bottom: 10px; line-height: 20px; color: var(--el-text-color-regular); }
 .login-form :deep(.el-input__wrapper) { min-height: 44px; padding: 0 14px; background: var(--el-bg-color-overlay); border-radius: var(--el-border-radius-base); }
 .login-form :deep(.el-input__inner) { height: 44px; font-size: 14px; caret-color: var(--el-color-primary); }
 .login-form :deep(.el-input__inner::placeholder) { color: var(--el-text-color-secondary); }
@@ -216,15 +247,14 @@ async function submitLogin() {
 .login-options :deep(.el-checkbox__inner) { width: 14px; height: 14px; }
 .login-reset-link { border: 0; padding: 0; min-height: 24px; background: transparent; color: var(--el-color-primary); font-size: 12px; }
 .login-reset-link:hover { color: var(--el-color-primary-light-3); }
-.login-reset-help { margin: 12px 0 0; font-size: 12px; line-height: 1.6; color: var(--el-text-color-regular); }
 .login-submit-error { margin: 12px 0 0; font-size: 12px; color: var(--el-color-danger); }
-.login-form .login-submit { width: 100%; height: 46px; margin: var(--login-space) 0 0; padding: 0 18px; border: 1px solid #d2aa5d; border-radius: 5px; background: linear-gradient(100deg, #b78b3d, #d3ad64); color: #fff; font-size: 14px; font-weight: 650; transition: filter .15s, transform .15s; --el-button-text-color: #fff; --el-button-hover-text-color: #fff; --el-button-active-text-color: #fff; }
-.login-form .login-submit:hover:not(.is-loading) { border-color: #d2aa5d; background: linear-gradient(100deg, #b78b3d, #d3ad64); color: #fff; filter: brightness(1.09); transform: translateY(-1px); }
-.login-form .login-submit:active:not(.is-loading) { transform: translateY(0); }
+.login-submit { width: 100%; height: 46px; margin: var(--login-space) 0 0; padding: 0 18px; border: 1px solid #d2aa5d; border-radius: 5px; background: linear-gradient(100deg, #b78b3d, #d3ad64); color: #fff; font-size: 14px; font-weight: 650; transition: filter .15s, transform .15s; --el-button-text-color: #fff; --el-button-hover-text-color: #fff; --el-button-active-text-color: #fff; }
+.login-submit:hover:not(.is-loading) { border-color: #d2aa5d; background: linear-gradient(100deg, #b78b3d, #d3ad64); color: #fff; filter: brightness(1.09); transform: translateY(-1px); }
+.login-submit:active:not(.is-loading) { transform: translateY(0); }
 .login-demo-note { margin: 20px 0 0; font-size: 12px; line-height: 1.6; text-align: center; color: var(--el-text-color-secondary); }
 @media (max-width: 1000px) {
-  .login-panel { aspect-ratio: auto; min-height: 640px; }
-  .login-access { padding: 40px 32px; }
+  .login-panel { aspect-ratio: auto; height: 640px; }
+  .login-access { padding-inline: 32px; }
   .login-logo { width: 116px; }
   .login-brand-art {
     top: 50%;
@@ -236,8 +266,8 @@ async function submitLogin() {
 }
 @media (max-width: 740px) {
   .login-page { padding: 24px 20px; }
-  .login-panel { width: min(440px, 100%); min-height: 600px; grid-template-columns: minmax(0, 1fr); }
-  .login-access { padding: 40px 28px; }
+  .login-panel { width: min(440px, 100%); height: 600px; grid-template-columns: minmax(0, 1fr); }
+  .login-access { padding: 64px 28px 24px; }
   .login-visual { display: none; }
 }
 </style>
